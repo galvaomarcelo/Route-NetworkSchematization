@@ -1,0 +1,56 @@
+
+2
+down vote
+favorite
+Lets have two points, (x1, y1) and (x2,y2)
+
+dx = |x1 - x2|
+
+dy = |y1 - y2|
+
+D_manhattan = dx + dy where dx,dy >= 0
+
+I am a bit stuck with how to get x1 - x2 positive for |x1 - x2|, presumably I introduce a binary variable representing the polarity, but I am not allowed multiplying a polarity switch to x1 - x2 as they are all unknown variables and that would result in a quadratic.
+
+
+If you are minimizing an increasing function of |x| (or maximizing a decreasing function, of course), you can always have the aboslute value of any quantity x in a lp as a variable absx such as:
+
+absx >= x
+absx >= -x
+It works because the value absx will 'tend' to its lower bound, so it will either reach x or -x.
+
+On the other hand, if you are minimizing a decreasing function of |x|, your problem is not convex and cannot be modelled as a lp.
+
+For all those kind of questions, it would be much better to add a simplified version of your problem with the objective, as this it often usefull for all those modelling techniques.
+
+Edit
+
+What I meant is that there is no general solution to this kind of problem: you cannot in general represent an absolute value in a linear problem, although in practical cases it is often possible.
+
+For example, consider the problem:
+
+max y
+  y <= | x |
+  -1 <= x <= 2
+  0 <= y  
+it is bounded and has an obvious solution (2, 2), but it cannot be modelled as a lp because the domain is not convex (it looks like the shape under a 'M' if you draw it).
+
+Without your model, it is not possible to answer the question I'm afraid.
+
+Edit 2
+
+I am sorry, I did not read the question correctly. If you can use binary variables and if all your distances are bounded by some constant M, you can do something.
+
+We use:
+
+a continuous variable ax to represent the absolute value of the quantity x
+a binary variable sx to represent the sign of x (sx = 1 if x >= 0)
+Those constraints are always verified if x < 0, and enforce ax = x otherwise:
+
+ ax <= x + M * (1 - sx)
+ ax >= x - M * (1 - sx)
+Those constraints are always verified if x >= 0, and enforce ax = -x otherwise:
+
+ ax <= -x + M * sx
+ ax >= -x - M * sx
+This is a variation of the "big M" method that is often used to linearize quadratic terms. Of course you need to have an upper bound of all the possible values of x (which, in your case, will be the value of your distance: this will typically be the case if your points are in some bounded area)
