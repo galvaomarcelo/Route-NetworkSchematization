@@ -41,7 +41,7 @@ public class WayTopo {
         JMapFrame.showMap(map);*/
     	System.out.println("test");
     	System.setProperty("org.geotools.referencing.forceXY", "true");
-	    JFrame frame = new JFrame("WAYTO For NetWork 2!");
+	    JFrame frame = new JFrame("WAYTO For NetWork 3!");
 	    frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE);
 	    frame.setExtendedState(frame.getExtendedState()|Frame.MAXIMIZED_BOTH);
 	    //PanelController app = new PanelController();

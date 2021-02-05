@@ -1048,7 +1048,7 @@ public class MainController {
 				String timestamp = date.format(formatter);
 				String fileName = "Route" + dataController.getRoute().getStartName() + dataController.getRoute().getEndName() + timestamp;
 				if(mainFrame.getCbToggleXOLayers().isSelected() == false ) {
-					geoJsonText = buildGeoJson(1, 100);
+					geoJsonText = buildGeoJson(3, 1);
 					//geoJsonText = builMultibleRescaledRouteGeoJson();
 					//fileName = fileName.concat("MultpleRescale");
 				}
@@ -1097,7 +1097,7 @@ public class MainController {
 		private  void writeFile(String content, String fileName, String location) throws IOException
 		{
 		    
-		     
+		     System.out.println("Wrinting Files: " + fileName);
 		    BufferedWriter writer = new BufferedWriter(new FileWriter(location+fileName));
 		    writer.write(content);
 		    writer.close();
@@ -1560,7 +1560,7 @@ public class MainController {
 //						finalPolygonPtList = relevantPtList;
 //					}
 					
-					
+						Point latLonCentroid  = p.getPolygonalFeature().getGeocoordsGeom().getCentroid();
 
 				        feature = new JSONObject();
 		            	feature.put("type", "Feature");
@@ -1580,10 +1580,12 @@ public class MainController {
 		            	geometry.put("coordinates", polygon);
 		            	
 		            	feature.put("geometry", geometry);
-		            	
+		            	System.out.println(p.getPolygonalFeature().getName() + "," + latLonCentroid.getY() + "," + latLonCentroid.getX());
 		            	properties = new JSONObject();
 		            	properties.put("type", p.getPolygonalFeature().getType());
 		            	properties.put("name", p.getPolygonalFeature().getName());
+		            	properties.put("lat", latLonCentroid.getY());
+		            	properties.put("lon", latLonCentroid.getX());
 		            	if(p.getType() == 1001)
 		            		properties.put("topology", "global");
 		            	else
@@ -1752,6 +1754,7 @@ public class MainController {
 					feature = new JSONObject();
 	            	feature.put("type", "Feature");
 	            	
+	            	System.out.println(p.getPointFeature().getName() + "," + p.getNode().getCoordinate().getY() + "," + p.getNode().getCoordinate().getX());
 	            	JSONArray point = new JSONArray();/*coordinate point1*/
 					
 					point.put(scale*p.getNode().getGeomByType(coordinateType).getX());
@@ -3012,19 +3015,19 @@ public class MainController {
 				
 				}
 				if(labelGrade < 1) {
-					System.out.println("0 Found: " + i);
+					//System.out.println("0 Found: " + i);
 					return i;
 					
 				
 				}
-				System.out.println("Grade " + i + ": " + labelGrade);
+				//System.out.println("Grade " + i + ": " + labelGrade);
 				labelBBGradesList.add(labelGrade);
 					
 			}
 			
 			int minGradeIndex = labelBBGradesList.indexOf(Collections.min(labelBBGradesList));
-			System.out.println("Min Grade " + minGradeIndex );
-			System.out.println(" ");
+			//System.out.println("Min Grade " + minGradeIndex );
+			//System.out.println(" ");
 			
 			return minGradeIndex;
 		}
