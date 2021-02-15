@@ -68,7 +68,7 @@ public class RouteDataController {
 	private ArrayList<PolygonalFeature> polygonalFeatureList;
 	private ArrayList<LinearFeature> linearFeatureList;
 	private ArrayList<PointFeature> pointFeatureList;
-	
+	  
 	//private SimpleFeatureType lineStringType;	
 
 	private Envelope networkEnvelop;
@@ -161,6 +161,7 @@ public class RouteDataController {
 		
 		/*We setstub edges when I load the networks*/
 		//setStubEdges();
+		/**Refine edges add edges gemotry nodes to the topology (streetnetwork)*/
 		TopoOperator3.refineEdges(route, streetNodeMap, adjacencyList, streetNetwork);
 		//symplifyPolygons(polygonalFeatureList, 9);
 		
@@ -174,8 +175,9 @@ public class RouteDataController {
 		System.out.println("load list time: " + (end - start) );
 		
 		
-		polygonalFeatureList = PolygonDAO.getInstance().getBoundaryList(route, 0.003);
-		pointFeatureList = PointLikeDAO.getInstance().getPointLMList(route, 0.04);
+		/***Load Landmarks***/
+		//polygonalFeatureList = PolygonDAO.getInstance().getBoundaryList(route, 0.003);
+		//pointFeatureList = PointLikeDAO.getInstance().getPointLMList(route, 0.04);
 		
 
 		
@@ -194,7 +196,7 @@ public class RouteDataController {
 			
 		}
 		
-		
+		/**Calculate and Update Decision Points*/
 		anlyseRoute();
 		
 		
@@ -295,7 +297,7 @@ public class RouteDataController {
 				}
 				//double diagonal = Math.sqrt( Math.pow(sEnv.getHeight(), 2)  +  Math.pow(sEnv.getWidth(), 2));
 					double tolerance = Math.pow(pathLength,0.8)*(Math.pow((g-1)/10, 3))/(80/(g));
-					setPathRelevantPoints(pathList.get(i), tolerance, pathLength/12, true);
+					setPathRelevantPoints(pathList.get(i), tolerance, pathLength/2, true);
 					
 			}
 			
@@ -368,7 +370,7 @@ public class RouteDataController {
 		//routeEnvelpe = route.getGeom().getEnvelopeInternal(); 
 
 		/**Simulate navigation data!*/
-		TopoOperator3.simulateNavigationData(route.getRoutePath().asLineString(3));
+		//TopoOperator3.simulateNavigationData(route.getRoutePath().asLineString(3));
 //		System.out.println("Geom size: " + route.getGeom().getNumPoints() + "  " + route.getGeom());
 //		System.out.println("Nodelis size " + route.asNodeList().size() + "  " + route.asNodeList());
 		
@@ -606,7 +608,7 @@ public class RouteDataController {
 		
 	}
 
-	
+	/**Calculate and Update Decision Points*/
 	private void anlyseRoute() {
 		
 		Path routePath = new Path(route.asNodeList());
@@ -1050,9 +1052,7 @@ public class RouteDataController {
 		ArrayList<Point2D> pathPoints = path.asJava2DList(0);
 		ArrayList<Integer> relevantPoints1 = new ArrayList<Integer>();
 		
-		
-		
-		
+
 		int startIndex = 0;
 		int endIndex = 0;
 		path.getNodeList().get(startIndex).setRelevantRouteNode(true);
@@ -1094,65 +1094,20 @@ public class RouteDataController {
 					relevantPoints1.add(i , relevantPoints1.get(i) -1);
 					i++;
 					
-//					double distToPre = routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i -1)));
-//					if(distToPre > 0.003){
-//						 if (routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i) -1)) < 0.003 ){							 
-//							 routePath.getNodeList().get((relevantPoints1.get(i) -1)).setRelevantRouteNode(true);
-//							 relevantPoints1.add(i , relevantPoints1.get(i) -1);
-//						 }
-//
-//					}
 				}
 				if(relevantPoints1.get(i) < path.getNodeList().size()-1 && !path.getNodeList().get((relevantPoints1.get(i) +1)).isRelevantRouteNode()) {
 					path.getNodeList().get(relevantPoints1.get(i) + 1).setRelevantRouteNode(true);
 				    relevantPoints1.add(i + 1 , relevantPoints1.get(i) + 1);
 					
-//					double distToPos = routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i + 1)));
-//					if(distToPos > 0.003){
-//						 if (routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i) + 1)) < 0.003 ){	 
-//							 routePath.getNodeList().get(relevantPoints1.get(i) + 1).setRelevantRouteNode(true);
-//							 relevantPoints1.add(i + 1 , relevantPoints1.get(i) + 1);
-//						 }
-//					}
+
 				}
 				
 				
 			}
 			
 		}
-//		Point2D simplifiedSubList[] = simplifier.simplify(pathPoints.toArray(new Point2D.Double[pathPoints.size()]), tolerance, highQuality);
-//		int lastI = 0;
-//		for ( int j = 0 ; j < simplifiedSubList.length ; j++){
-//			for ( int i = lastI ; i  <pathPoints.size()  ; i++){
-//			
-//				
-//				if ( pathPoints.get(i) == simplifiedSubList[j]){
-//					
-//					
-//					
-//					path.getNodeList().get(i).setRelevantRouteNode(true);
-//					lastI =i + 1;
-//					break;
-//					
-//				}
-//			}
-//
-//		}
 
-		
-//		for(int i = 1; i < pathPoints.size()-1; i++ ){
-//			if(path.getNodeList().get(i).getTopoRelations().size() >=1 ||	
-//					(path.getNodeList().get(i).getDegree() != 2) ||					
-//					i < 4 || i > pathPoints.size() -5){
-//				path.getNodeList().get(i).setRelevantRouteNode(true);
-//				path.getNodeList().get(i-1).setRelevantRouteNode(true);
-//				path.getNodeList().get(i+1).setRelevantRouteNode(true);
-//			}
-//		}
-//		for(int i = 1; i < pathPoints.size()-1; i++ ){
-//			if(path.getNodeList().get(i).isRelevantRouteNode())
-//				relevantPoints1.add(i);
-//		}
+
 		
 		for(int i = 0; i < relevantPoints1.size() - 1; i++){
 			if( path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(relevantPoints1.get(i +1)).getGeom()) > densifyTolerance*1.2 ) {
@@ -1181,141 +1136,6 @@ public class RouteDataController {
 	}
 
 
-	private ArrayList<Integer> getPathRelevantPoints(Path path, double tolerance, double densifyTolerance, boolean highQuality) {
-		ArrayList<Point2D> routePoints = path.asJava2DList(0);
-		ArrayList<Integer> relevantPoints1 = new ArrayList<Integer>();
-		
-		
-		
-		int startIndex = 0;
-		int endIndex = 0;
-		
-		
-		relevantPoints1.add(startIndex);
-		path.getNodeList().get(startIndex).setRelevantRouteNode(true);
-		for(int i = 1; i < routePoints.size(); i++ ){
-			if(path.getNodeList().get(i).getTopoRelations().size() >=1 ||
-					path.getNodeList().get(i).isDecisionPoint() ||
-					path.getNodeList().get(i).isRoundAbout() ||
-					(path.getNodeList().get(i).getDegree() != 2) ||					
-					i < 4 || i > routePoints.size() -5){
-				endIndex = i;
-				
-				Point2D simplifiedSubList[] = simplifier.simplify(routePoints.subList(startIndex, endIndex+1).toArray(new Point2D.Double[endIndex+1 -startIndex]), tolerance, highQuality);
-				int k = 1;
-				for ( int j = startIndex +1 ; j < endIndex+1  ; j++){
-					
-					if ( routePoints.get(j) == simplifiedSubList[k]){
-						
-						
-						relevantPoints1.add(j);
-						path.getNodeList().get(j).setRelevantRouteNode(true);
-						k++;
-						
-					}
-				}
-				startIndex = endIndex;
-				
-				
-			
-			}
-			
-			
-			
-		}
-		for(int i = 0; i < relevantPoints1.size(); i++){
-			
-		}
-//		/*Add as relevant point closest points to DP, Crossing, non-2degree*/
-		for(int i = 0; i < relevantPoints1.size(); i++){
-			if( path.getNodeList().get(relevantPoints1.get(i)).isDecisionPoint() ||
-					(path.getNodeList().get(relevantPoints1.get(i)).getDegree() != 2  ||					
-							path.getNodeList().get(relevantPoints1.get(i)).isTopoCrossing()) 					
-					){
-				if(relevantPoints1.get(i) != 0 &&  !path.getNodeList().get(relevantPoints1.get(i)).isRoundAbout() &&
-						!path.getNodeList().get((relevantPoints1.get(i) -1)).isRelevantRouteNode() 
-						) {
-					path.getNodeList().get(relevantPoints1.get(i) -1).setRelevantRouteNode(true);
-					relevantPoints1.add(i , relevantPoints1.get(i) -1);
-					i++;
-					
-//					double distToPre = routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i -1)));
-//					if(distToPre > 0.003){
-//						 if (routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i) -1)) < 0.003 ){							 
-//							 routePath.getNodeList().get((relevantPoints1.get(i) -1)).setRelevantRouteNode(true);
-//							 relevantPoints1.add(i , relevantPoints1.get(i) -1);
-//						 }
-//
-//					}
-				}
-				if(relevantPoints1.get(i) < routePoints.size()-1 && !path.getNodeList().get(relevantPoints1.get(i)).isRoundAbout()  
-						&& !path.getNodeList().get((relevantPoints1.get(i) +1)).isRelevantRouteNode()) {
-
-				    relevantPoints1.add(i + 1 , relevantPoints1.get(i) + 1);
-				    path.getNodeList().get(relevantPoints1.get(i) + 1).setRelevantRouteNode(true);
-					
-//					double distToPos = routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i + 1)));
-//					if(distToPos > 0.003){
-//						 if (routePoints.get(relevantPoints1.get(i)).distance(routePoints.get(relevantPoints1.get(i) + 1)) < 0.003 ){	 
-//							 routePath.getNodeList().get(relevantPoints1.get(i) + 1).setRelevantRouteNode(true);
-//							 relevantPoints1.add(i + 1 , relevantPoints1.get(i) + 1);
-//						 }
-//					}
-				}
-				
-				
-			}
-			
-		}
-		for(int i = 0; i < relevantPoints1.size() - 1; i++){
-			if( path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(relevantPoints1.get(i +1)).getGeom()) > densifyTolerance*1.2 ) {
-				int k = relevantPoints1.get(i) + 1;
-				double dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
-				boolean achou = false;
-				while(!achou && k < path.getNodeList().size() -2) {
-					k++;
-					dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
-					if(dist > densifyTolerance  && k < relevantPoints1.get(i +1)) {
-						relevantPoints1.add(i + 1 , k);
-					    path.getNodeList().get(k).setRelevantRouteNode(true);
-					    achou = true;
-					}
-					else if( k == relevantPoints1.get(i +1))
-						achou = true;
-						
-					
-				}
-			}
-		}
-//		for(int i = 0; i < routePoints.size(); i++ ){
-//			if(i < 4 || i > routePoints.size() -4 )
-//				if(!relevantPoints1.contains(i))
-//						relevantPoints1.add(i);
-//		}
-		/*gambiarra ultimo ponto as relevant*/
-		if(!relevantPoints1.contains(path.getNodeList().size() -1)){
-			relevantPoints1.add(path.getNodeList().size() -1);
-			path.getNodeList().get(path.getNodeList().size() -1).setRelevantRouteNode(true);
-		}
-		
-		//System.out.println("Tolerance: " +tolerance+  " NumPTsOriginal: "+ originalPoints.size()+ "NumPTRelevant: " + relevantPoints1.size());
-		Collections.sort(relevantPoints1);
-		return relevantPoints1;
-	}
-
-
-
-	/**Set edges that are stub, and remove stubs */
-	private void setStubEdges() {
-		for(StreetEdge e: this.streetNetwork.getEdges().values()) {
-			if(e.getSourcePoint().isRouteNode() && (!e.getTargetPoint().isRouteNode() && e.getTargetPoint().getDegree() == 1) )
-				e.setStubEdge(true);
-			else if(e.getTargetPoint().isRouteNode() && (!e.getSourcePoint().isRouteNode() && e.getSourcePoint().getDegree() == 1))
-				e.setStubEdge(true);
-
-		}
-		
-	}
 
 	/**Indentify paths that are chuck edges*/
 	public  void chunckPahtAnalyses(ArrayList<Path> pathList) {
@@ -1401,19 +1221,6 @@ public class RouteDataController {
 			
 		}
 		
-		
-	}
-
-	private void transformFishEye(FisheyeTransform fe) {
-		for(StreetNode n: streetNodeMap.values()){
-		
-			Point2D.Double finalPt = new Point2D.Double();
-			n.setGeom(GeoConvertionsOperations.Java2DPointToJTSGeometry(
-					fe.transform(new Point2D.Double(n.getGeom().getX(), n.getGeom().getY() ) ) ) ) ;
-			
-			
-			
-		}
 		
 	}
 

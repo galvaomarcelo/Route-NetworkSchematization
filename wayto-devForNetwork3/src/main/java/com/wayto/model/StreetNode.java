@@ -25,7 +25,7 @@ public class StreetNode {
 	private boolean isRoundAbout = false;
 	private boolean isRelevantRouteNode = false;
 	private boolean isDisconnected = false;
-	private boolean isFakeNode = false;
+
 	private boolean isStreetNode = true;
 	private int isPolygonNode = 0; /*polygon id or 0 if false*/
 	private int isPointLMNode = 0; /*point id or 0 if false*/
@@ -228,14 +228,14 @@ public class StreetNode {
 		this.isPointLMNode = isPointLMNode;
 	}
 
-	public boolean isFakeNode() {
-		return isFakeNode;
-	}
+//	public boolean isFakeNode() {
+//		return isFakeNode;
+//	}
 
-
-	public void setFakeNode(boolean isFakeNode) {
-		this.isFakeNode = isFakeNode;
-	}
+//
+//	public void setFakeNode(boolean isFakeNode) {
+//		this.isFakeNode = isFakeNode;
+//	}
 
 
 	public boolean isRoundAbout() {

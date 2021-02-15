@@ -8,7 +8,7 @@ import com.wayto.operator.GeometricOperation;
 public class NodeCircularOrderComparator implements Comparator<StreetNode>
 {
 	StreetNode origin;
-	NodeCircularOrderComparator(StreetNode origin){
+	public NodeCircularOrderComparator(StreetNode origin){
         this.origin= origin;
     }
     public int compare(StreetNode n1, StreetNode n2) {

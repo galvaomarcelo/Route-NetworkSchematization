@@ -1,7 +1,5 @@
 package com.wayto.controller;
 
-import static org.junit.Assert.assertNotNull;
-
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,51 +7,36 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.geom.Point2D;
 import java.io.BufferedWriter;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.geotools.geometry.jts.Geometries;
-import org.locationtech.jts.algorithm.ConvexHull;
-import org.locationtech.jts.densify.Densifier;
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.simplify.DouglasPeuckerSimplifier;
-import com.wayto.mapFeaturesModel.ClassyPointLayer;
+
 import com.wayto.mapFeaturesModel.Layer;
-import com.wayto.mapFeaturesModel.PlotPoint;
 import com.wayto.mapFeaturesModel.PointLayer;
 import com.wayto.mapFeaturesModel.PolyLineLayer;
-import com.wayto.model.LinearFeature;
 import com.wayto.model.Path;
-import com.wayto.model.PointFeature;
-import com.wayto.model.PolygonalFeature;
-import com.wayto.model.RouteEdge;
 import com.wayto.model.StreetEdge;
 import com.wayto.model.StreetNode;
 import com.wayto.model.topo.PointTopo;
 import com.wayto.model.topo.PolygonalTopo;
-import com.wayto.model.topo.Section;
 import com.wayto.operator.GeoConvertionsOperations;
 import com.wayto.operator.GeometricOperation;
 import com.wayto.operator.LinearTransformation2;
 import com.wayto.operator.OctlinearBoundingBox;
-
 import com.wayto.operator.OptimizerOperator2;
 import com.wayto.operator.PointsPolar;
 import com.wayto.operator.Smoother;
@@ -270,7 +253,7 @@ public class MainController {
 				/***SCHEMATIZE THE ROUTE***/
 				try {
 					
-					ArrayList<Point2D> MIPPath = 	OptimizerOperator2.routeOptimizerLazyTopologyCheck(
+					OptimizerOperator2.routeOptimizerLazyTopologyCheck(
 							dataController.getStreetNodeMap(),							
 							dataController.getCircularOrderList(),
 							dataController.getRoute(),
@@ -297,38 +280,14 @@ public class MainController {
 							
 							dataController.getPathList().get(0).setWasSchematized(true);
 
-							
-							
-//							PolyLineLayer transfPathLayer = new PolyLineLayer("MIPRESuLT ", 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, false);	
-//							transfPathLayer.getLines().add(MIPPath);
-//							xMap.getMapContent().getLayers().add(transfPathLayer);
-
-					
-							
-//							ArrayList<Point2D> MIPPath = 	OptimizerOperator2.routeOptimizer2(
-//									dataController.getStreetNodeMap(),							
-//									dataController.getCircularOrderList(),
-//									dataController.getRoute(),
-//									mainFrame.getSliderBendFactor().getValue(),/*bend*/
-//									mainFrame.getSliderEdgeOrientation().getValue(), /*dir*/
-//									mainFrame.getSliderDistFactor().getValue(), /*dist*/
-//									mainFrame.getCbDirectionModel().getSelectedIndex(), /*0:none , 1:bestdir, 2:trad, 3:klippel*/
-//									Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimit().getText()));
-//									
-//									dataController.getRoute().uptadeXGeom();
-//									dataController.getPathList().get(0).setWasSchematized(true);
-//									dataController.getPathList().get(0).setxGeom(dataController.getRoute().getxGeom());
-
-
 				} catch (IloException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				} catch (Exception e1) {
-					// TODO Auto-generated catch block
+
 					e1.printStackTrace();
 				}
 				
-				/***NETWORK SCHEMATIZATION***/
+
 				LinearTransformation2 lt = new LinearTransformation2();
 				/***POLYGONS CONTROL EDGES*/
 				for(PolygonalTopo pt: dataController.getPolygonalTopoList()){
@@ -351,12 +310,10 @@ public class MainController {
 //						transfPathLayer.getLines().add(transPointList);
 //						xMap.getMapContent().getLayers().add(transfPathLayer);
 						try {
-							ArrayList<Point2D> MIPPath = OptimizerOperator2.networkpathOptimizer2(auxPAth,transPointList);
+							OptimizerOperator2.updateXPath(auxPAth,transPointList);
 						}  catch (IloException e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						} catch (Exception e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
 						
@@ -370,29 +327,20 @@ public class MainController {
 					Path adjPath = dataController.getPathList().get(i);
 					/** if is adj edge but not LM  control edge**/
 					if(dataController.getPathList().get(i).isRouteAdjEdge() ) {
-
-//						ArrayList<Point2D> transPointList = null;
-//						/**IF IT IS LM CONTROL EDGE (ALREADY SCHEMATIZED WITH THE ROUTE*/
-//						if (adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0)
-//							transPointList = lt.transformRouteAdjEdgeFixDist(adjPath , 27*adjToRouteEdgesMinLength);
-//						else
-//							transPointList = lt.transformRouteAdjEdgeFixDist(adjPath , 27*adjToRouteEdgesMinLength);
-						
+		
 						ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
 						System.out.println();
 //						PolyLineLayer transfPathLayer = new PolyLineLayer("TransAdjEdje " + i , 8, 2, Color.GREEN, Color.GREEN, false, true);	
 //						transfPathLayer.getLines().add(transPointList);
 //						xMap.getMapContent().getLayers().add(transfPathLayer);
 						try {
-							ArrayList<Point2D> MIPPath = OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 
 							dataController.getPathList().get(i).setWasSchematized(true);
 							
 						}  catch (IloException e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						} catch (Exception e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
 					}
@@ -402,7 +350,6 @@ public class MainController {
 				for(int i = 1; i < dataController.getPathList().size(); i++){
 					if(dataController.getPathList().get(i).isChunkPath()) {
 //						System.out.println("Adjusting ADjPath " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
-	
 						Path adjPath = dataController.getPathList().get(i);
 						if( adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0) {
 							System.out.println("this is LM control edge");
@@ -414,58 +361,88 @@ public class MainController {
 ////						transfPathLayer.getLines().add(transPointList);
 ////						xMap.getMapContent().getLayers().add(transfPathLayer);
 						try {
-							ArrayList<Point2D> MIPPath = OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 
 							dataController.getPathList().get(i).setWasSchematized(true);
 							
 						}  catch (IloException e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						} catch (Exception e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
 					}
 				}
-				/***NETWORK PATH SCHEMATIZATION***/
+				
+				/***SCHEMATIZE NETWROKS***/
+				if(mainFrame.getCbXIncorrectsNetwork().isSelected() || mainFrame.getCbXallNetwork().isSelected()) {
+					ArrayList<Path> pathsToSchematizeTogether = new ArrayList<Path>();
+					for(int i = 1; i < dataController.getPathList().size(); i++){
+					//System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
+										
+						if(!dataController.getPathList().get(i).isChunkPath() && !dataController.getPathList().get(i).isRouteAdjEdge() && !(dataController.getPathList().get(i).getIsPolygon()>0)){
+							
+							
+							pathsToSchematizeTogether.add(dataController.getPathList().get(i));
+						}		
+					}
+						
+						try {
+							OptimizerOperator2.networkOptimizerLazy(pathsToSchematizeTogether,  dataController.getPathList(),  
+									dataController.getStreetNodeMap(), 
+									dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent(),
+									mainFrame.getSliderProportionNetwork().getValue(),
+									mainFrame.getSliderEdgeOrientationNetwork().getValue(),
+									mainFrame.getCbCheckSelfTopology().isSelected(),
+									mainFrame.getCbCheckTopology().isSelected(),
+									minDistToRoute,
+									Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitNetwork().getText()),
+									resultReport);
+
+							//dataController.getPathList().get(i).setWasSchematized( true );
+
+						}  catch (IloException e1) {
+							e1.printStackTrace();
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
+					
+
+				}
+
+
+
+						
+
+				
+				
+				
+				/***PATHSs SCHEMATIZATION***/
 				for(int i = 1; i < dataController.getPathList().size(); i++){
 					//					System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
 
-					if(!dataController.getPathList().get(i).getNodeList().get(0).isFakeNode()
-							&& !dataController.getPathList().get(i).getNodeList().get(dataController.getPathList().get(i).getNodeList().size() -1).isFakeNode()
-							&& !dataController.getPathList().get(i).isRouteAdjEdge()){
+					if(!dataController.getPathList().get(i).isRouteAdjEdge()){
 
-						Path p = dataController.getPathList().get(i);
-
+						
 
 						/****POLYGONA PATHS***/
-
 						if(dataController.getPathList().get(i).getIsPolygon()>0) {
 							PolygonalTopo pt = null;
 							for(int j = 0;  j < dataController.getPolygonalTopoList().size(); j++) {
-
-
 								/**ConvexHullText*/
 								//	ConvexHull ch = new ConvexHull(dataController.getPathList().get(i).asLineString(1));
-
 								//	PolyLineLayer convexHullLayer = new PolyLineLayer("ConvexPath " + i , 8, 2, Color.ORANGE, Color.ORANGE, true, true);	
 								//	convexHullLayer.getLines().add(GeoConvertionsOperations.JTSGeometryToJavaD2(ch.getConvexHull()));
 								//	xMap.getMapContent().getLayers().add(convexHullLayer);
-
-
-
 								if (dataController.getPolygonalTopoList().get(j).getPolygonalFeature().getId() == dataController.getPathList().get(i).getIsPolygon()){
 									pt = dataController.getPolygonalTopoList().get(j);
 									break;
 								}
 							}
 							System.out.println(" \n \nSchematizing Landmark " + pt.getPolygonalFeature().getName() + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).asLineString(0).getLength() );
-
 							
 							PathReport resultPathReport = new PathReport();
 							resultPathReport.setPathName(pt.getPolygonalFeature().getName());
-							resultPathReport.setPathId(String.valueOf(i));
-							
+							resultPathReport.setPathId(String.valueOf(i));				
 							double extendLimit = 0.05;
 							/****DISCONNECTED POLYGONAL PATHS***/
 							if(	pt.getType() == PolygonalTopo.PASSING_ALONG_LEFT || 
@@ -479,12 +456,10 @@ public class MainController {
 								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
 
 								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) ,pt.getType(), proportion );
-								
-								
+																
 								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
 								transfPathLayer.getLines().add(transPointList);
-								xMap.getMapContent().getLayers().add(transfPathLayer);
-								
+								xMap.getMapContent().getLayers().add(transfPathLayer);						
 								
 								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
 								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
@@ -509,8 +484,8 @@ public class MainController {
 								
 								if(mainFrame.getCbXIncorrects().isSelected() || mainFrame.getCbXall().isSelected()) {
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
+												dataController.getStreetNodeMap(), 
 												mainFrame.getSliderBendFactorRegion().getValue(),
 												mainFrame.getSliderDistFactorRegion().getValue(),
 												mainFrame.getSliderProportionRegion().getValue(),
@@ -524,10 +499,8 @@ public class MainController {
 										dataController.getPathList().get(i).setWasSchematized( true );
 
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
 
@@ -535,12 +508,10 @@ public class MainController {
 								else {
 
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
 								}
@@ -554,11 +525,8 @@ public class MainController {
 
 								//								double proportion = OptimizerOperator2.getPathProportion(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
 								//								System.out.println("PROPORTION: " + proportion);
-								
-								
+													
 								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-								
-								
 								
 								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) , pt.getType(), proportion );
 
@@ -575,18 +543,15 @@ public class MainController {
 								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
 								xMap.getMapContent().getLayers().add(OBBOXLayer);
 								//dataController.getRoute().getxGeom().intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList));
-
-								
-								
-								
+																								
 								if(
 										mainFrame.getCbXall().isSelected() ||  
 										(mainFrame.getCbXIncorrects().isSelected() &&
 												dataController.getRoute().getRoutePath().asLineString(2).intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList))) ) {
 
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
+												dataController.getStreetNodeMap(), 
 												mainFrame.getSliderBendFactorRegion().getValue(),
 												mainFrame.getSliderDistFactorRegion().getValue(),
 												mainFrame.getSliderProportionRegion().getValue(),
@@ -600,10 +565,8 @@ public class MainController {
 										dataController.getPathList().get(i).setWasSchematized( true );
 
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
 
@@ -611,14 +574,11 @@ public class MainController {
 								}
 								else {
 
-
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
 
@@ -631,7 +591,6 @@ public class MainController {
 									pt.getType() ==  PolygonalTopo.ROUTE_ENDS_AT ||
 									pt.getType() ==  PolygonalTopo.ROUTE_STARTS_AT
 									) {
-
 								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
 //								System.out.println("PROPORTION: " + proportion);
 								ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
@@ -640,70 +599,64 @@ public class MainController {
 								transfPathLayer.getLines().add(transPointList);
 								xMap.getMapContent().getLayers().add(transfPathLayer);
 																
-
+//
 								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
 								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
 
-								
-								
-								PolyLineLayer topocheckLayer = new PolyLineLayer("TopoCheckLayerPath " + i , 8, 5, Color.RED, Color.RED, false, false);	
-								PointLayer edgesNodesTopochecker = new PointLayer("PointTopoCheckLayerPath " + i , 8.1, 4,7, Color.RED, Color.RED, false);	
-								
-	
-								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
-								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
-								xMap.getMapContent().getLayers().add(OBBOXLayer);
+//
+//								PolyLineLayer topocheckLayer = new PolyLineLayer("TopoCheckLayerPath " + i , 8, 5, Color.RED, Color.RED, false, false);	
+//								PointLayer edgesNodesTopochecker = new PointLayer("PointTopoCheckLayerPath " + i , 8.1, 4,7, Color.RED, Color.RED, false);									
+//	
+//								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
+//								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
+//								xMap.getMapContent().getLayers().add(OBBOXLayer);
 
-								for(Path p2: dataController.getPathList()) {
-									if(p2.isWasSchematized()) {
-										PointsPolar polarPoints = new PointsPolar();
-										polarPoints  = GeometricOperation.toPolar(p2.asJava2DList(2));
-										for(int k = 0; k < p2.getNodeList().size() - 1; k++) {
-											if(!dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k)) && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k +1))) {
-												
-												if (boundingPolygon.contains( p2.getNodeList().get(k).getxGeom()  ) || boundingPolygon.contains( p2.getNodeList().get(k +1).getxGeom() )){
-													int indexU = k;
-													int indexV = k+1;
-													boolean foundBend = false; 
-													while(!foundBend ) {
-														if(indexV < p2.getNodeList().size() -1 && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(indexV + 1))
-																&& Math.abs(polarPoints.getPoints().get(indexV -1).getTheta() - polarPoints.getPoints().get(indexV).getTheta()) < 0.001
-																&& boundingPolygon.contains( p2.getNodeList().get(indexV + 1).getxGeom()  ))
-															indexV++;
-														else {
+//								for(Path p2: dataController.getPathList()) {
+//									if(p2.isWasSchematized()) {
+//										PointsPolar polarPoints = new PointsPolar();
+//										polarPoints  = GeometricOperation.toPolar(p2.asJava2DList(2));
+//										for(int k = 0; k < p2.getNodeList().size() - 1; k++) {
+//											if(!dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k)) && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k +1))) {
+//												
+//												if (boundingPolygon.contains( p2.getNodeList().get(k).getxGeom()  ) || boundingPolygon.contains( p2.getNodeList().get(k +1).getxGeom() )){
+//													int indexU = k;
+//													int indexV = k+1;
+//													boolean foundBend = false; 
+//													while(!foundBend ) {
+//														if(indexV < p2.getNodeList().size() -1 && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(indexV + 1))
+//																&& Math.abs(polarPoints.getPoints().get(indexV -1).getTheta() - polarPoints.getPoints().get(indexV).getTheta()) < 0.001
+//																&& boundingPolygon.contains( p2.getNodeList().get(indexV + 1).getxGeom()  ))
+//															indexV++;
+//														else {
+//															
+//															ArrayList<Point2D> edgeTopo = new ArrayList<Point2D>();
+//															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
+//															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
+//															topocheckLayer.getLines().add(edgeTopo);
+//															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
+//															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
+//															foundBend = true;
+//															k = indexV -1;
+//														}
+//													}																																				
+//													
+//												}
+//											}
+//																	
+//										}
+//									}
+//								}
+//								
+//								xMap.getMapContent().getLayers().add(topocheckLayer);
+//								xMap.getMapContent().getLayers().add(edgesNodesTopochecker);
 															
-															ArrayList<Point2D> edgeTopo = new ArrayList<Point2D>();
-															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
-															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
-															topocheckLayer.getLines().add(edgeTopo);
-															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
-															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
-															foundBend = true;
-															k = indexV -1;
-														}
-													}
-														
-													
-													
-													
-												}
-											}
-																	
-										}
-									}
-								}
-								
-								xMap.getMapContent().getLayers().add(topocheckLayer);
-								xMap.getMapContent().getLayers().add(edgesNodesTopochecker);
-								
-								
 								if( mainFrame.getCbXall().isSelected() ||
 										(mainFrame.getCbXIncorrects().isSelected() && 
 										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
 //									if(dataController.getPathList().get(i).getNodeList().size() < 10) {
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
+												dataController.getStreetNodeMap(), 
 												mainFrame.getSliderBendFactorRegion().getValue(),
 												mainFrame.getSliderDistFactorRegion().getValue(),
 												mainFrame.getSliderProportionRegion().getValue(),
@@ -712,56 +665,26 @@ public class MainController {
 												mainFrame.getCbCheckTopology().isSelected(),
 												adjVerticesMinDist,
 												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
-												resultPathReport);
-										
+												resultPathReport);										
 					
 										dataController.getPathList().get(i).setWasSchematized( true );
 										
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
-									
-//									try {
-//										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.optimizeCrossSection(dataController.getPathList().get(i), dataController.getPathList(), transPointList, dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
-//												mainFrame.getSliderBendFactorRegion().getValue(),
-//												mainFrame.getSliderDistFactorRegion().getValue(),
-//												mainFrame.getSliderProportionRegion().getValue(),
-//												mainFrame.getSliderEdgeOrientationRegion().getValue(),
-//												mainFrame.getCbCheckSelfTopology().isSelected(),
-//												mainFrame.getCbCheckTopology().isSelected(),
-//												minNonAdjEdgeDist,
-//												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()));
-//										dataController.getPathList().get(i).updatePathXNodes(MIPPath);
-//										dataController.getPathList().get(i).uptadeXGeom();
-//										dataController.getPathList().get(i).setWasSchematized( true );
-//										
-//									}  catch (IloException e1) {
-//										// TODO Auto-generated catch block
-//										e1.printStackTrace();
-//									} catch (Exception e1) {
-//										// TODO Auto-generated catch block
-//										e1.printStackTrace();
-//									}
-//									
-									
-									
-									
 
 								}
 								else {
 
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 										
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
+
 										e1.printStackTrace();
 									}
 								}
@@ -777,13 +700,9 @@ public class MainController {
 								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, false);	
 								transfPathLayer.getLines().add(transPointList);
 								xMap.getMapContent().getLayers().add(transfPathLayer);
-								
-								
-
 								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
 								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
 								
-
 								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);
 								transfPathLayer.getLines().add(octBox.getBoundingPolygon());
 								xMap.getMapContent().getLayers().add(OBBOXLayer);
@@ -792,8 +711,8 @@ public class MainController {
 										(mainFrame.getCbXIncorrects().isSelected() &&
 										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
+												dataController.getStreetNodeMap(),
 												mainFrame.getSliderBendFactorRegion().getValue(),
 												mainFrame.getSliderDistFactorRegion().getValue(),
 												mainFrame.getSliderProportionRegion().getValue(),
@@ -807,24 +726,19 @@ public class MainController {
 										dataController.getPathList().get(i).setWasSchematized( true );
 										
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
-									}
-									
+									}									
 
 								}
 								
 								else {
 									try {
-										ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 									}  catch (IloException e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									} catch (Exception e1) {
-										// TODO Auto-generated catch block
 										e1.printStackTrace();
 									}
 								}
@@ -833,9 +747,6 @@ public class MainController {
 
 							if(resultPathReport.getObjectiveFunctionValue() > 0)
 								resultReport.getPathReportList().add(resultPathReport);
-
-							
-
 						}
 						/**END POLYGONAL PATHS**/
 						/****STREET PATHS***/
@@ -853,7 +764,7 @@ public class MainController {
 									(mainFrame.getCbXIncorrectsNetwork().isSelected() &&
 									dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1))))))) {
 								try {
-									ArrayList<Point2D> MIPPath = 	OptimizerOperator2.streetPathOptimizer3DirTopoRelevant(dataController.getPathList().get(i), dataController.getPathList(), transPointList, dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+									OptimizerOperator2.streetPathOptimizer3DirTopoRelevant(dataController.getPathList().get(i), dataController.getPathList(), transPointList, dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
 											mainFrame.getSliderBendFactorNetwork().getValue(),
 											mainFrame.getSliderDistFactorNetwork().getValue(),
 											mainFrame.getSliderProportionNetwork().getValue(),
@@ -866,10 +777,8 @@ public class MainController {
 									dataController.getPathList().get(i).setWasSchematized( true );
 									
 								}  catch (IloException e1) {
-									// TODO Auto-generated catch block
 									e1.printStackTrace();
 								} catch (Exception e1) {
-									// TODO Auto-generated catch block
 									e1.printStackTrace();
 								}
 								
@@ -878,32 +787,15 @@ public class MainController {
 							
 							else {
 								try {
-									ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
+									OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 								}  catch (IloException e1) {
-									// TODO Auto-generated catch block
 									e1.printStackTrace();
 								} catch (Exception e1) {
-									// TODO Auto-generated catch block
 									e1.printStackTrace();
 								}
 							}
 
-						
 
-//
-//
-//							
-//							
-//							
-//							try {
-//								ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer2(dataController.getPathList().get(i),transPointList);
-//							}  catch (IloException e1) {
-//								// TODO Auto-generated catch block
-//								e1.printStackTrace();
-//							} catch (Exception e1) {
-//								// TODO Auto-generated catch block
-//								e1.printStackTrace();
-//							}
 
 						}
 
@@ -933,12 +825,10 @@ public class MainController {
 						//ArrayList<Point2D> transPointList = lt.transformControlEdgeFixDist(auxPAth , 35*adjToRouteEdgesMinLength);
 						
 						try {
-							ArrayList<Point2D> MIPPath = OptimizerOperator2.networkpathOptimizer2(auxPAth,transPointList);
+							OptimizerOperator2.updateXPath(auxPAth,transPointList);
 						}  catch (IloException e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						} catch (Exception e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
 					
@@ -955,47 +845,12 @@ public class MainController {
 				//this.addXDisconectedPolygonLayers();
 				layerTableModel.fireTableStructureChanged();
 				xMap.repaint();
-				
-				
-				//				for( Path p: dataController.getPathList()){
-//					
-//					
-//				}
-				
-//				int pathIndex = 0;
-//				for( Path p: dataController.getPathList()){
-//					if(pathIndex == 1){
-//						try {
-//							System.out.println("Schematizing path " + pathIndex);
-//							ArrayList<Point2D> MIPPath = 	OptimizerOperator2.networkpathOptimizer(
-//									dataController.getStreetNodeMap(),							
-//									dataController.getCircularOrderList(),
-//									p,
-//									-1, 
-//									-1,
-//									mainFrame.getSliderBendFactor().getValue(),/*bend*/
-//									mainFrame.getSliderEdgeOrientation().getValue(), /*dir*/
-//									mainFrame.getSliderDistFactor().getValue(), /*dist*/		
-//									Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimit().getText()));
-//						}  catch (IloException e1) {
-//							// TODO Auto-generated catch block
-//							e1.printStackTrace();
-//						} catch (Exception e1) {
-//							// TODO Auto-generated catch block
-//							e1.printStackTrace();
-//						}
-//						
-//					}
-//					pathIndex++;
-//				}
-//				this.addXNetworkLayers();
-//				layerTableModel.fireTableStructureChanged();
-//				xMap.repaint();
-				
-
-
 			}
-			/* Button Show All */
+			
+			
+			
+			
+			/**** Button Show All ******/
 			if (source == mainFrame.getCbShowAllLayers()) {
 				if(mainFrame.getCbShowAllLayers().isSelected() == false ){
 					for(Layer l: xMap.getMapContent().getLayers()){
@@ -1014,7 +869,7 @@ public class MainController {
 				xMap.repaint();
 
 			}
-			/* Button Show All */
+			/**** Button Toggle */
 			if (source == mainFrame.getCbToggleXOLayers()) {
 				if(mainFrame.getCbToggleXOLayers().isSelected() == false ){
 					for(Layer l: xMap.getMapContent().getLayers()){
@@ -1061,7 +916,6 @@ public class MainController {
 					fileName = fileName.concat(".json");
 					writeFile(geoJsonText, fileName, exportFolder  );
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 
@@ -3598,92 +3452,6 @@ public class MainController {
 
 			}
 
-			
-//			
-//			/****Points:  intersections ******/
-//			PointLayer ptbufferInterLayer = new  PointLayer("Control Point Anchor");
-//			ptbufferInterLayer.setSize(featureEnhance*8);
-//			ptbufferInterLayer.setStroke(featureEnhance*1);
-//			ptbufferInterLayer.setFillColor(Color.PINK);
-//			ptbufferInterLayer.setVisible(false);
-//
-//			PointLayer ptanchorLayer = new  PointLayer("Anchors");
-//			ptanchorLayer.setSize(featureEnhance*8);
-//			ptanchorLayer.setStroke(featureEnhance*1);
-//			ptanchorLayer.setFillColor(Color.PINK);
-//			ptanchorLayer.setVisible(false);
-//
-//
-//			PointLayer ptPolycross = new  PointLayer("Route Polygon Crosses");
-//			ptPolycross.setSize(featureEnhance*8);
-//			ptPolycross.setStroke(featureEnhance*1);
-//			ptPolycross.setFillColor(Color.ORANGE);
-//			ptPolycross.setVisible(false);
-//
-//
-//			PointLayer ptPolySelectedcross = new  PointLayer("SelectedRoute Polygon Crosses");
-//			ptPolySelectedcross.setSize(featureEnhance*8);
-//			ptPolySelectedcross.setStroke(featureEnhance*1);
-//			ptPolySelectedcross.setFillColor(Color.MAGENTA);
-//			ptPolySelectedcross.setVisible(false);
-//
-//
-//			ClassyPointLayer ptPolyVertices = new  ClassyPointLayer("Polygons vertices start class.");
-//			ptPolyVertices.setSize(featureEnhance*4);
-//			ptPolyVertices.setStroke(featureEnhance*2);
-//			ptPolyVertices.setFillColor(Color.MAGENTA);
-//			ptPolyVertices.setVisible(false);
-//
-//
-//			ClassyPointLayer ptPolyVertices2 = new  ClassyPointLayer("Polygons vertices end class.");
-//			ptPolyVertices2.setSize(featureEnhance*4);
-//			ptPolyVertices2.setStroke(featureEnhance*2);
-//			ptPolyVertices2.setFillColor(Color.MAGENTA);
-//			ptPolyVertices2.setVisible(false);
-//
-//
-//			for(PointFeature pt:dataController.getPointFeatureList()){
-//
-//				if(pt.getType() == "ptInter")
-//					ptbufferInterLayer.getPoints().add(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),
-//									env.getMaxY() - pt.getGeom().getY()));
-//				else if(pt.getType() == "anchor")
-//					ptanchorLayer.getPoints().add(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),
-//									env.getMaxY() - pt.getGeom().getY()));
-//				else if(pt.getType() == "cross")
-//					ptPolycross.getPoints().add(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),
-//									env.getMaxY() - pt.getGeom().getY()));
-//				else if(pt.getType() == "selectedcross")
-//					ptPolySelectedcross.getPoints().add(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),
-//									env.getMaxY() - pt.getGeom().getY()));
-//				else if(pt.getType() == "polyvertex1")
-//					ptPolyVertices.getPoints().add( new PlotPoint(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),	env.getMaxY() - pt.getGeom().getY()),
-//							pt.getColor()
-//							)
-//
-//							);
-//				else if(pt.getType() == "polyvertex2")
-//					ptPolyVertices2.getPoints().add( new PlotPoint(
-//							new Point2D.Double(pt.getGeom().getX() - env.getMinX(),	env.getMaxY() - pt.getGeom().getY()),
-//							pt.getColor()
-//							)
-//
-//							);
-//
-//
-//			}
-//			xMap.getMapContent().getLayers().add(ptbufferInterLayer);
-//			xMap.getMapContent().getLayers().add(ptanchorLayer);
-//			xMap.getMapContent().getLayers().add(ptPolycross);
-//			xMap.getMapContent().getLayers().add(ptPolySelectedcross);
-//			xMap.getMapContent().getLayers().add(ptPolyVertices);
-//			xMap.getMapContent().getLayers().add(ptPolyVertices2);
-//			xMap.getMapContent().getLayers().add(decisionPoints);
 			
 			
 		}

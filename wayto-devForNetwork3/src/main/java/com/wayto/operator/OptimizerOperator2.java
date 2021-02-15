@@ -3,6 +3,8 @@ package com.wayto.operator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.locationtech.jts.geom.Coordinate;
@@ -13,6 +15,8 @@ import org.locationtech.jts.geom.Polygon;
 import org.apache.commons.math3.geometry.spherical.twod.Edge;
 import org.geotools.geometry.jts.Geometries;
 import org.locationtech.jts.algorithm.*;
+
+import com.wayto.controller.NodeCircularOrderComparator;
 import com.wayto.model.Path;
 import com.wayto.model.Route;
 import com.wayto.model.RouteEdge;
@@ -4161,6 +4165,141 @@ public class OptimizerOperator2 {
 			
 			
 		}
+		
+		public static void networkOptimizerLazy(ArrayList<Path> pathsToSchematizeTogether, ArrayList<Path> pathList,
+				Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetwork, 
+				double networkEnvelopExtend, int proportionFactor, int dirFactor, boolean checkSelfTopology, 
+				boolean checkTopology, double minNonAdjEdgeDist, int executionTimeLimit,
+				ResultReport resultReport) throws IloException, Exception{
+			
+			long start, end;
+			start = System.currentTimeMillis(); 
+			/*holds streetnode_id of edges.**/
+			ArrayList<Integer[]> edges = new ArrayList<Integer[]>();
+
+			Map<Integer, ArrayList<StreetNode>> nodesAdjList =  new HashMap<Integer, ArrayList<StreetNode>>();
+			/* value proportion of edge map to index in edge list.**/
+			ArrayList<Double> edgesXProportion = new ArrayList<Double>();
+					
+			int executionsCount = 1;
+						
+			for(Path p: pathsToSchematizeTogether) {
+				
+				/*treat first node of the path*/
+				Integer[] edge = new Integer[2];
+				edge[0] = p.getNodeList().get(0).getId();
+				
+				/*add node to adjlist if it new*/
+				if(!nodesAdjList.containsKey(p.getNodeList().get(0).getId())) 
+					nodesAdjList.put(p.getNodeList().get(0).getId(), new ArrayList<StreetNode>());
+					
+				
+				
+				for(int i = 1; i < p.getNodeList().size(); i++) {				
+					if(p.getNodeList().get(i).isRelevantRouteNode() || i == p.getNodeList().size() -1) {
+						
+						edge[1] = p.getNodeList().get(i).getId();
+						edges.add(edge);
+			
+						
+						double focusX = (nodeMap.get(edge[0]).getProjectGeom().getX() + nodeMap.get(edge[1]).getProjectGeom().getX())/2 ;
+						double focusY = (nodeMap.get(edge[0]).getProjectGeom().getY() + nodeMap.get(edge[1]).getProjectGeom().getY())/2 ;
+						
+						double proportion = getProportionToPoint( focusX, focusY , streetNetwork, networkEnvelopExtend);
+						edgesXProportion.add(proportion);
+						
+						/*add node to adjlist if it new*/
+						if(!nodesAdjList.containsKey(p.getNodeList().get(i).getId())) 
+							nodesAdjList.put(p.getNodeList().get(i).getId(), new ArrayList<StreetNode>());						
+						
+						/*add node edge to adj list*/
+						nodesAdjList.get(edge[0]).add(p.getNodeList().get(i));
+						nodesAdjList.get(edge[1]).add(nodeMap.get(edge[0]));
+						
+						if(i  < p.getNodeList().size() -1){
+							edge = new Integer[2];
+							edge[0] = p.getNodeList().get(i).getId();
+						}
+						
+					}				
+					
+					
+				}
+				
+			}
+			
+			System.out.println(nodesAdjList.size());
+			System.out.println(edges.size());
+			
+			for(int nodeID: nodesAdjList.keySet()){				
+				Collections.sort(nodesAdjList.get(nodeID), new NodeCircularOrderComparator(nodeMap.get(nodeID)));
+				//System.out.println(nodesAdjList.get(nodeID).size());
+			}
+			//Collections.sort(edgesXProportion);
+			
+			boolean violateTopology = false;			
+
+			/*holds maps edge index in edges list: value proportion.**/
+			ArrayList<Integer[]> selfEdgePaarToCheck = new ArrayList<Integer[]>();
+			
+			/*holds streetnode_id: value proportion.**/
+			ArrayList<Integer[]> withNonPathEdgePaarToCheck = new ArrayList<Integer[]>();
+			
+			violateTopology = networkOptimizer1( 
+					edges, pathList,  edgesXProportion,
+					nodeMap,  nodesAdjList,
+					  proportionFactor, dirFactor, 
+					checkSelfTopology,  checkTopology,
+					minNonAdjEdgeDist, 
+					executionTimeLimit,  resultReport, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
+
+			
+			
+			System.out.println("Paar of self edges that violates topology:");
+			System.out.println(selfEdgePaarToCheck);
+			
+			System.out.println("Paar of non path edges that violates topology:");
+			System.out.println(withNonPathEdgePaarToCheck);
+			
+			if(checkSelfTopology || checkTopology)
+				while(violateTopology && executionsCount < 10) {
+
+					executionsCount++;
+					violateTopology = networkOptimizer1( 
+							edges, pathList,  edgesXProportion,
+							nodeMap,  nodesAdjList,
+							  proportionFactor, dirFactor, 
+							checkSelfTopology,  checkTopology,
+							minNonAdjEdgeDist, 
+							executionTimeLimit,  resultReport, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
+				}
+			PathReport networkResultReport = new PathReport();
+			networkResultReport.setPathName("Network i");
+			networkResultReport.setNumberOfEdges(edges.size());
+		
+			end = System.currentTimeMillis();
+			networkResultReport.setExecutionTime(end - start);
+			networkResultReport.setPathType(0);
+			networkResultReport.setProportion(-1);
+			networkResultReport.setFixedExtraCrossings(selfEdgePaarToCheck.size() +  withNonPathEdgePaarToCheck.size());
+			networkResultReport.setExecutions(executionsCount);
+			resultReport.getPathReportList().add(networkResultReport);
+		}
+
+		
+
+
+
+
+		private static boolean networkOptimizer1(ArrayList<Integer[]> edges, ArrayList<Path> pathList,
+				ArrayList<Double> edgesXProportion, Map<Integer, StreetNode> nodeMap, Map<Integer, ArrayList<StreetNode>> circularOrderList, int proportionFactor,
+				int dirFactor, boolean checkSelfTopology, boolean checkTopology, double minNonAdjEdgeDist,
+				int executionTimeLimit, ResultReport resultReport, ArrayList<Integer[]> selfEdgePaarToCheck,
+				ArrayList<Integer[]> withNonPathEdgePaarToCheck) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
 
 		public static ArrayList<Point2D> streetPathOptimizer3DirTopoRelevant( Path path, ArrayList<Path> pathList, ArrayList<Point2D> transPointList, Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetworkTopological, double bendFactor,  double distFactor, double proportionFactor, double dirFactor, Boolean checkSelfTopology, Boolean checkTopology,double minNonAdjEdgeDist, int executionTimeLimit ) throws IloException, Exception   {
 			//System.out.println("OPTIMIZER Network PATH - > ACTION!!!!!");	
@@ -5576,7 +5715,7 @@ public class OptimizerOperator2 {
 				
 			}
 			else{
-				networkpathOptimizer2(path,transPointList);
+				updateXPath(path,transPointList);
 				throw new Exception("Cannot solve MIP Model on time");
 				
 			}
@@ -5590,7 +5729,7 @@ public class OptimizerOperator2 {
 		
 		public static ArrayList<Point2D> landmarkAbstractOptimizerLazy( 
 				Path path, PolygonalTopo polygonTopo, ArrayList<Path> pathList, ArrayList<Point2D> transPointList, double proportion, Polygon boundingPolygon,
-				Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetworkTopological, 
+				Map<Integer, StreetNode> nodeMap, 
 				double bendFactor,  double distFactor, double proportionFactor, double dirFactor, 
 				Boolean checkSelfTopology, Boolean checkTopology,
 				double minNonAdjEdgeDist, 
@@ -5612,6 +5751,7 @@ public class OptimizerOperator2 {
 				//if(p.isRoute())		
 				/*if is it was schematiza and it is not a point like landmark edge*/
 				if(p.isWasSchematized() && !(p.getNodeList().get(0).getIsPointLMNode() > 0 || p.getNodeList().get(p.getNodeList().size() -1).getIsPointLMNode() > 0)) {
+					
 					if( !(polygonTopo.getPolygonalFeature().getType().equals("urban")  && p.isRouteAdjEdge()  ) ) {	
 						PointsPolar polarPoints = new PointsPolar();
 						polarPoints  = GeometricOperation.toPolar(p.asJava2DList(2));
@@ -5659,7 +5799,7 @@ public class OptimizerOperator2 {
 
 			violateTopology = landmarkAbstractOptimizer3DirTopoRelevant2( 
 					path, pathList,  transPointList, proportion,inOctBoxXEdges, 
-					nodeMap,  streetNetworkTopological, 
+					nodeMap,  
 					bendFactor,  distFactor,  proportionFactor, dirFactor, 
 					checkSelfTopology,  checkTopology,
 					minNonAdjEdgeDist, 
@@ -5677,7 +5817,7 @@ public class OptimizerOperator2 {
 					executionsCount++;
 					violateTopology = landmarkAbstractOptimizer3DirTopoRelevant2( 
 							path, pathList,  transPointList, proportion, inOctBoxXEdges, 
-							nodeMap,  streetNetworkTopological, 
+							nodeMap, 
 							bendFactor,  distFactor,  proportionFactor, dirFactor, 
 							checkSelfTopology,  checkTopology,
 							minNonAdjEdgeDist, 
@@ -5697,7 +5837,7 @@ public class OptimizerOperator2 {
 		
 		public static boolean landmarkAbstractOptimizer3DirTopoRelevant2( 
 				Path path, ArrayList<Path> pathList, ArrayList<Point2D> transPointList, double proportion, ArrayList<Integer[]> topoCheckEdgeList,
-				Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetworkTopological, 
+				Map<Integer, StreetNode> nodeMap, 
 				double bendFactor,  double distFactor, double proportionFactor, double dirFactor, 
 				Boolean checkSelfTopology, Boolean checkTopology,
 				double minNonAdjEdgeDist, 
@@ -8791,23 +8931,10 @@ public class OptimizerOperator2 {
 		}
 		
 		
-		public static ArrayList<Point2D> networkpathOptimizer2( Path path, ArrayList<Point2D> transPointList ) throws IloException, Exception   {
-			//System.out.println("OPTIMIZER Network PATH - > ACTION!!!!!");	
-			ArrayList<Point2D> mipLineString =  new ArrayList<Point2D>();
-			
-			//ArrayList<Point2D> lineString = path.asJava2DList(1);
-			
-			//IloCplex cplex = new IloCplex();
-			
-			for(int i=0; i < transPointList.size(); i++){
-//				if(path.getNodeList().get(i).getxGeom() != null)
-//					mipLineString.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(path.getNodeList().get(i).getxGeom()));
-//				else
-					mipLineString.add(transPointList.get(i));
-				//Spath.getNodeList().get(i).setxGeom(GeoConvertionsOperations.Java2DPointToJTSGeometry(transPointList.get(i)));
-			}
-			path.updatePathXNodes2( mipLineString );
-			return mipLineString;
+		public static ArrayList<Point2D> updateXPath( Path path, ArrayList<Point2D> transPointList ) throws IloException, Exception   {
+
+			path.updatePathXNodes2( transPointList );
+			return transPointList;
 			
 			
 			
@@ -9350,6 +9477,10 @@ public class OptimizerOperator2 {
 			
 
 		}
+		
+		
+		
+		
 
 		public static double getPathProportion(Path path, StreetNetworkTopological streetNetwork, double maxExtend) {
 			
@@ -9396,6 +9527,80 @@ public class OptimizerOperator2 {
 		}
 		
 		
+		
+		private static double getProportionToPoint(double focusX, double focusY, StreetNetworkTopological streetNetwork,
+				double maxExtend) {
+			
+			
+			
+			ArrayList<StreetEdge> xEdges = new ArrayList<StreetEdge>();
+			ArrayList<Double> xEdgeDistanceFocus = new ArrayList<Double>();
+			ArrayList<Double> edgesWeight = new ArrayList<Double>();
+			
+			
+			for(StreetEdge edge: streetNetwork.getEdges().values()){
+				if( !edge.isFakeEdge() ){
+					Point sourceXPoint = edge.getSourcePoint().getxGeom();
+					Point targetXPoint = edge.getTargetPoint().getxGeom();
+					if((sourceXPoint != null && targetXPoint != null) ){
+						Point sourceOrigPoint = edge.getSourcePoint().getProjectGeom();
+						Point targetOrigPoint = edge.getTargetPoint().getProjectGeom();
+						
+						double edgeCenterX = (sourceOrigPoint.getCoordinate().x + targetOrigPoint.getCoordinate().x)/2;
+						double edgeCenterY = (sourceOrigPoint.getCoordinate().y + targetOrigPoint.getCoordinate().y)/2;
+						
+						double dist = Math.sqrt((edgeCenterX - focusX)*(edgeCenterX - focusX) + (edgeCenterY - focusY)*(edgeCenterY - focusY));
+						
+						if(dist != 0) {
+							//System.out.println("dist to path: " + dist);
+							xEdges.add(edge);						
+							xEdgeDistanceFocus.add(dist);
+							if(edge instanceof RouteEdge)
+								edgesWeight.add(10.0);
+							else if (edge.getIsPolygonEdge()>0)
+								edgesWeight.add(5.0);
+							else
+								edgesWeight.add(5.0);
+						}
+						else
+							System.out.println("dist to edge is fucking 0: " + dist);
+						
+					}
+
+				}
+					
+			}
+			
+			double sumLenghtOriginal = 0;
+			double sumLenghtX = 0;
+			
+			for(int i=0; i < xEdges.size(); i++) {
+				Point sourceOrigPoint = xEdges.get(i).getSourcePoint().getProjectGeom();
+				Point targetOrigPoint = xEdges.get(i).getTargetPoint().getProjectGeom();
+				Point sourceXPoint = xEdges.get(i).getSourcePoint().getxGeom();
+				Point targetXPoint = xEdges.get(i).getTargetPoint().getxGeom();
+				
+				double normalDist = 100*xEdgeDistanceFocus.get(i)/maxExtend;
+				
+				System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
+				
+				/**Select edges with normaldist < 50*/
+				if(normalDist < 50) {	
+					double distFactor = Math.pow(normalDist, 2);
+					double lengthOrig = sourceOrigPoint.distance(targetOrigPoint);
+					double lengthX = sourceXPoint.distance(targetXPoint);
+					sumLenghtOriginal += edgesWeight.get(i)*(lengthOrig/distFactor);
+					sumLenghtX += edgesWeight.get(i)*(lengthX/distFactor);
+					//System.out.println("is inside : ");
+				}
+				
+				
+			}
+			if(Double.isNaN(sumLenghtX/sumLenghtOriginal))
+				return 1;
+			else
+				return sumLenghtX/sumLenghtOriginal;
+		}
 		
 		public static double getPathProportion3(Path path, StreetNetworkTopological streetNetwork, double maxExtend) {
 			
@@ -9676,7 +9881,11 @@ public class OptimizerOperator2 {
 			else
 				return sumLenghtX/sumLenghtOriginal;
 		}
+
+
+
 		
+
 		
 		
 
