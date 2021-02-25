@@ -2,10 +2,16 @@ package com.wayto.model;
 
 import java.util.ArrayList;
 import java.util.Comparator;
- 
+
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+
 import com.wayto.model.topo.NodeTopoRelation;
 import com.wayto.operator.GeoConvertionsOperations;
+import com.wayto.operator.GeometricOperation;
+import com.wayto.operator.PointsPolar;
 
 
 public class StreetNode {
@@ -399,6 +405,19 @@ public class StreetNode {
 						
 		}
 		return false;
+	}
+
+	public void setxGeom(double x, double y) {
+		if(this.xGeom != null) {
+			this.xGeom.getCoordinate().setX(x);
+			this.xGeom.getCoordinate().setY(y);
+		}
+		else {
+			GeometryFactory geometryFactory = new GeometryFactory( new PrecisionModel(PrecisionModel.FLOATING), 4326);		
+			Coordinate coord = new Coordinate(x, y);			
+			this.setxGeom(	 geometryFactory.createPoint(coord) );
+		}
+			
 	}
 
 

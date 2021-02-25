@@ -211,6 +211,85 @@ public class Path implements Cloneable{
 	public void setClazz(int clazz) {
 		this.clazz = clazz;
 	}
+	
+	public void updatePathXNonRelevantNodes() {
+		
+		int lastXIndex = 0;
+		ArrayList<Point> originalPoints = new ArrayList<Point>();
+		ArrayList<Point> schematicPoints = new ArrayList<Point>();
+		originalPoints.add(this.getNodeList().get(0).getProjectGeom());
+		schematicPoints.add(this.getNodeList().get(0).getxGeom());
+		
+		for(int i = 1; i < this.getNodeList().size(); i++) {	
+			
+			if(this.getNodeList().get(i).getxGeom() != null ) {
+				if(i > lastXIndex + 1) {
+					
+					
+					
+					originalPoints.add(this.getNodeList().get(i).getProjectGeom());					
+					schematicPoints.add(this.getNodeList().get(i).getxGeom());
+					
+
+					schematicPoints = GeometricOperation.fillLine(schematicPoints, originalPoints);	
+
+
+					for(int k = lastXIndex + 1; k < i; k++) {
+						this.getNodeList().get(k).setxGeom(schematicPoints.get(k-lastXIndex));
+					}
+					
+					
+					originalPoints.clear();
+					originalPoints.add(this.getNodeList().get(i).getProjectGeom());
+					
+					schematicPoints.clear();
+					schematicPoints.add(this.getNodeList().get(i).getxGeom());
+					
+				}
+				else {					
+					originalPoints.clear();
+					originalPoints.add(this.getNodeList().get(i).getProjectGeom());
+					
+					schematicPoints.clear();
+					schematicPoints.add(this.getNodeList().get(i).getxGeom());
+								
+				}
+				lastXIndex = i;	
+				
+			}
+			else {
+				originalPoints.add(this.getNodeList().get(i).getProjectGeom());
+			}
+			
+
+
+		}
+		
+		
+		System.out.println();
+		System.out.println("*********NEW PATH**********");
+		for(int i = 0; i < this.getNodeList().size(); i++) {	
+			System.out.print(i); 
+			if(this.getNodeList().get(i).getxGeom() != null ) {
+				
+				if(this.getNodeList().get(i).isRelevantRouteNode() ) 
+					System.out.print("REL:"); 
+					
+				
+				System.out.print(this.getNodeList().get(i).getxGeom());
+				
+			}
+			else {
+				System.out.print("NULL");
+			}
+			
+
+
+		}
+		
+	}
+	
+	
 	/********Update the XPosition of the Node in the path according to the position given in the final Points
 	 * Set the the edgeangles connect to each node as well ( "setXStaionEdges")///
 	 * CONSIDER INCLUDE THOSE TWO FUNCTION IN ANOTHER CLASS (geometric operation)*/
@@ -724,19 +803,6 @@ public class Path implements Cloneable{
 			return super.clone();
 		}
 
-
-
-
-
-
-
-
-
-
-
-
-
-	
 	
 	
 }

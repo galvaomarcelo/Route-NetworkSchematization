@@ -467,7 +467,7 @@ public class MainFrame extends JPanel{
 		JPanel networkGeneralPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		
 		cbXIncorrectsNetwork = new JCheckBox("Schematize Incorrects", false);
-		cbXallNetwork = new JCheckBox("Schematize All", false);
+		cbXallNetwork = new JCheckBox("Schematize All", true);
 		
 		cbCheckSelfTopologyNetwork = new JCheckBox("Check Self Topology", false);
 		cbCheckTopologyNetwork = new JCheckBox("Check Topology", false);
@@ -534,7 +534,7 @@ public class MainFrame extends JPanel{
 
 		JPanel networkTransSimpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		JLabel textAreaNetworkTransSimpPanel = new JLabel("Simplification tolerance ");
-		sliderTranfsSimplificationNetwork = new JSlider(JSlider.HORIZONTAL, 1, 10, 6);
+		sliderTranfsSimplificationNetwork = new JSlider(JSlider.HORIZONTAL, 1, 10, 10);
 		sliderTranfsSimplificationNetwork.setBackground( new Color(1,true));
 		sliderTranfsSimplificationNetwork.setOpaque(false);
 		sliderTranfsSimplificationNetwork.setMajorTickSpacing(2);

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.locationtech.jts.geom.Coordinate;
@@ -435,7 +436,8 @@ public class OptimizerOperator2 {
 			//double fixDist = rescaledRouteLenght/150;
 			/**if it is adjs edge calculates fix edge lenght*/
 			if(v2Index >= nR){
-				isAdjEdge = true;
+				/**IsAdjEdge= TRUE Fixes Edge Size*/
+				//isAdjEdge = true;
 				if(streetNodeMap.get(edgeList.get(i)[1]).getIsPointLMNode()>0) {
 					fixDist = LMfixDist;
 				}
@@ -486,7 +488,7 @@ public class OptimizerOperator2 {
 					cplex.addLe(leftSide2, rightSide);
 					
 					cplex.addGe(leftSide3, rightSide2);
-					/*condition to fix size incident edges*/
+					/**condition to fix size incident edges**/
 					if(isAdjEdge){
 						rightSide3 =cplex.diff(fixDist, rightSide);
 						rightSide4 =cplex.sum(rightSide, fixDist);
@@ -4166,16 +4168,21 @@ public class OptimizerOperator2 {
 			
 		}
 		
-		public static void networkOptimizerLazy(ArrayList<Path> pathsToSchematizeTogether, ArrayList<Path> pathList,
-				Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetwork, 
+		public static void networkOptimizerLazy(ArrayList<Path> pathsToSchematizeTogether, ArrayList<Path> allPathList,
+				Route route, Map<Integer, StreetNode> nodeMap, StreetNetworkTopological streetNetwork, 
 				double networkEnvelopExtend, int proportionFactor, int dirFactor, boolean checkSelfTopology, 
-				boolean checkTopology, double minNonAdjEdgeDist, int executionTimeLimit,
+				boolean checkTopology, double minNonAdjEdgeDist, double adjVerticesMinDist, double rescaledProp, int executionTimeLimit,
 				ResultReport resultReport) throws IloException, Exception{
 			
+			PathReport report = new PathReport();
+
 			long start, end;
 			start = System.currentTimeMillis(); 
 			/*holds streetnode_id of edges.**/
 			ArrayList<Integer[]> edges = new ArrayList<Integer[]>();
+			
+			/*holds streetnode_ids .**/
+			ArrayList<Integer> nodes = new ArrayList<Integer>();
 
 			Map<Integer, ArrayList<StreetNode>> nodesAdjList =  new HashMap<Integer, ArrayList<StreetNode>>();
 			/* value proportion of edge map to index in edge list.**/
@@ -4190,10 +4197,12 @@ public class OptimizerOperator2 {
 				edge[0] = p.getNodeList().get(0).getId();
 				
 				/*add node to adjlist if it new*/
-				if(!nodesAdjList.containsKey(p.getNodeList().get(0).getId())) 
-					nodesAdjList.put(p.getNodeList().get(0).getId(), new ArrayList<StreetNode>());
+				if(!nodesAdjList.containsKey(p.getNodeList().get(0).getId())) {
+					nodes.add(p.getNodeList().get(0).getId());
+					nodesAdjList.put(p.getNodeList().get(0).getId(), new ArrayList<StreetNode>());					
+				}
 					
-				
+			
 				
 				for(int i = 1; i < p.getNodeList().size(); i++) {				
 					if(p.getNodeList().get(i).isRelevantRouteNode() || i == p.getNodeList().size() -1) {
@@ -4205,12 +4214,17 @@ public class OptimizerOperator2 {
 						double focusX = (nodeMap.get(edge[0]).getProjectGeom().getX() + nodeMap.get(edge[1]).getProjectGeom().getX())/2 ;
 						double focusY = (nodeMap.get(edge[0]).getProjectGeom().getY() + nodeMap.get(edge[1]).getProjectGeom().getY())/2 ;
 						
-						double proportion = getProportionToPoint( focusX, focusY , streetNetwork, networkEnvelopExtend);
-						edgesXProportion.add(proportion);
+						//double proportion = getProportionToPoint( focusX, focusY , streetNetwork, networkEnvelopExtend);
+						double proportion = getProportionToPoint( focusX, focusY , allPathList, networkEnvelopExtend);
 						
+						
+						//edgesXProportion.add(proportion*rescaledProp*1);
+						edgesXProportion.add(proportion);
 						/*add node to adjlist if it new*/
-						if(!nodesAdjList.containsKey(p.getNodeList().get(i).getId())) 
-							nodesAdjList.put(p.getNodeList().get(i).getId(), new ArrayList<StreetNode>());						
+						if(!nodesAdjList.containsKey(p.getNodeList().get(i).getId())) {
+							nodesAdjList.put(p.getNodeList().get(i).getId(), new ArrayList<StreetNode>());
+							nodes.add(p.getNodeList().get(i).getId());
+						}
 						
 						/*add node edge to adj list*/
 						nodesAdjList.get(edge[0]).add(p.getNodeList().get(i));
@@ -4227,15 +4241,87 @@ public class OptimizerOperator2 {
 				}
 				
 			}
+						
+			  // Get the iterator over the HashMap 
+	        Iterator<Map.Entry<Integer, ArrayList<StreetNode>> > 
+	            iterator = nodesAdjList.entrySet().iterator(); 
+	  
+	        // Iterate over the HashMap 
+	        while (iterator.hasNext()) { 	  
+	            // Get the entry at this iteration 
+	            Map.Entry<Integer, ArrayList<StreetNode>>  entry  = iterator.next(); 
+	  
+	            // Check if this value is the required value 
+	            if (entry.getValue().size() < 3) { 
+	  	                // Remove this entry from HashMap 
+	                iterator.remove(); 
+	            }
+	            else {
+	            	Collections.sort(entry.getValue(), new NodeCircularOrderComparator(nodeMap.get(entry.getKey())));
+	            }
+	        } 
 			
-			System.out.println(nodesAdjList.size());
+//			for(int nodeID: nodesAdjList.keySet()){				
+//				//System.out.println(nodesAdjList.get(nodeID).size());
+//			}
+	        report.setPathName("Network");
+	        report.setNumberOfEdges(edges.size());
+	        report.setNumberOfNodes(nodes.size());
+	        
+	       
+	        System.out.println(nodesAdjList.size());
+			System.out.println(nodes.size());
 			System.out.println(edges.size());
+	        
+	        
 			
-			for(int nodeID: nodesAdjList.keySet()){				
-				Collections.sort(nodesAdjList.get(nodeID), new NodeCircularOrderComparator(nodeMap.get(nodeID)));
-				//System.out.println(nodesAdjList.get(nodeID).size());
+			/*Contains a pair of schematized node ids, that represents and edge for minal distantce constrains*/
+			ArrayList<Integer[]> minimalXEdgeSet = new ArrayList<Integer[]>();
+			
+			/*fill minimalXEdgeSet*/
+			for(Path p: allPathList) {
+				//if(p.isRoute() ||p.isRouteAdjEdge())
+				//if(p.isRoute())		
+				/*if is it was schematiza and it is not a point like landmark edge*/
+				if(p.isWasSchematized() && !p.isRouteAdjEdge() && !(p.getNodeList().get(0).getIsPointLMNode() > 0 || p.getNodeList().get(p.getNodeList().size() -1).getIsPointLMNode() > 0)) {
+					
+					
+						PointsPolar polarPoints = new PointsPolar();
+						polarPoints  = GeometricOperation.toPolar(p.asJava2DList(2));
+						for(int i = 0; i < p.getNodeList().size() - 1; i++) {
+							if(!nodes.contains(p.getNodeList().get(i).getId()) && !nodes.contains(p.getNodeList().get(i +1).getId())) {
+								
+									int indexU = i;
+									int indexV = i+1;
+									boolean foundBend = false; 
+									while(!foundBend ) {
+
+										if(indexV < p.getNodeList().size() -1 && !nodes.contains(p.getNodeList().get(indexV + 1).getId())
+												&& Math.abs(polarPoints.getPoints().get(indexV -1).getTheta() - polarPoints.getPoints().get(indexV).getTheta()) < 0.001
+												 )
+											indexV++;
+										else {
+											Integer[] edge = new Integer[2];
+											edge[0] = p.getNodeList().get(indexU).getId();
+											edge[1] = p.getNodeList().get(indexV).getId();
+											minimalXEdgeSet.add(edge);
+											foundBend = true;
+											i = indexV -1;
+										}
+									}
+
+								
+							}
+
+						}
+					
+				}
 			}
-			//Collections.sort(edgesXProportion);
+			
+			
+			
+//			Collections.sort(edgesXProportion);
+			System.out.println(edgesXProportion);
 			
 			boolean violateTopology = false;			
 
@@ -4245,13 +4331,15 @@ public class OptimizerOperator2 {
 			/*holds streetnode_id: value proportion.**/
 			ArrayList<Integer[]> withNonPathEdgePaarToCheck = new ArrayList<Integer[]>();
 			
+			OctlinearBoundingBox  octBox = new OctlinearBoundingBox(route.getRoutePath().asJava2DList(2),   2.0) ;
+			
 			violateTopology = networkOptimizer1( 
-					edges, pathList,  edgesXProportion,
-					nodeMap,  nodesAdjList,
+					edges, nodes, allPathList,  edgesXProportion,
+					nodeMap,  nodesAdjList, minimalXEdgeSet, octBox,
 					  proportionFactor, dirFactor, 
 					checkSelfTopology,  checkTopology,
-					minNonAdjEdgeDist, 
-					executionTimeLimit,  resultReport, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
+					minNonAdjEdgeDist, adjVerticesMinDist,
+					executionTimeLimit,  report, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
 
 			
 			
@@ -4261,29 +4349,33 @@ public class OptimizerOperator2 {
 			System.out.println("Paar of non path edges that violates topology:");
 			System.out.println(withNonPathEdgePaarToCheck);
 			
-			if(checkSelfTopology || checkTopology)
-				while(violateTopology && executionsCount < 10) {
-
-					executionsCount++;
-					violateTopology = networkOptimizer1( 
-							edges, pathList,  edgesXProportion,
-							nodeMap,  nodesAdjList,
-							  proportionFactor, dirFactor, 
-							checkSelfTopology,  checkTopology,
-							minNonAdjEdgeDist, 
-							executionTimeLimit,  resultReport, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
-				}
-			PathReport networkResultReport = new PathReport();
-			networkResultReport.setPathName("Network i");
-			networkResultReport.setNumberOfEdges(edges.size());
+//			if(checkSelfTopology || checkTopology)
+//				while(violateTopology && executionsCount < 10) {
+//
+//					executionsCount++;
+//					violateTopology = networkOptimizer1( 
+//							edges, nodes, pathList,  edgesXProportion,
+//							nodeMap,  nodesAdjList,  minimalXEdgeSet, octBox,
+//							  proportionFactor, dirFactor, 
+//							checkSelfTopology,  checkTopology,
+//							minNonAdjEdgeDist, adjVerticesMinDist,
+//							executionTimeLimit,  report, selfEdgePaarToCheck, withNonPathEdgePaarToCheck) ;
+//				}
+		
+			
+			
+			for(Path p: pathsToSchematizeTogether) {				
+				p.updatePathXNonRelevantNodes();
+				p.setWasSchematized(true);
+			}
 		
 			end = System.currentTimeMillis();
-			networkResultReport.setExecutionTime(end - start);
-			networkResultReport.setPathType(0);
-			networkResultReport.setProportion(-1);
-			networkResultReport.setFixedExtraCrossings(selfEdgePaarToCheck.size() +  withNonPathEdgePaarToCheck.size());
-			networkResultReport.setExecutions(executionsCount);
-			resultReport.getPathReportList().add(networkResultReport);
+			report.setExecutionTime(end - start);
+			report.setPathType(0);
+			report.setProportion(edgesXProportion.get(0));
+			report.setFixedExtraCrossings(selfEdgePaarToCheck.size() +  withNonPathEdgePaarToCheck.size());
+			report.setExecutions(executionsCount);
+			resultReport.getPathReportList().add(report);
 		}
 
 		
@@ -4291,13 +4383,798 @@ public class OptimizerOperator2 {
 
 
 
-		private static boolean networkOptimizer1(ArrayList<Integer[]> edges, ArrayList<Path> pathList,
-				ArrayList<Double> edgesXProportion, Map<Integer, StreetNode> nodeMap, Map<Integer, ArrayList<StreetNode>> circularOrderList, int proportionFactor,
+
+
+		private static boolean networkOptimizer1(ArrayList<Integer[]> edges, ArrayList<Integer> nodes, ArrayList<Path> pathList,
+				ArrayList<Double> edgesXProportion, Map<Integer, StreetNode> nodeMap, Map<Integer, ArrayList<StreetNode>> circularOrderList,
+				ArrayList<Integer[]> minimalXEdgeSet, OctlinearBoundingBox octBox, int proportionFactor,
 				int dirFactor, boolean checkSelfTopology, boolean checkTopology, double minNonAdjEdgeDist,
-				int executionTimeLimit, ResultReport resultReport, ArrayList<Integer[]> selfEdgePaarToCheck,
-				ArrayList<Integer[]> withNonPathEdgePaarToCheck) {
-			// TODO Auto-generated method stub
-			return false;
+				double adjVerticesMinDist, int executionTimeLimit, PathReport report, ArrayList<Integer[]> selfEdgePaarToCheck,
+				ArrayList<Integer[]> edgePaarToCheck) throws IloException, Exception{
+
+
+			long start, end;
+			start = System.currentTimeMillis(); 
+			
+			IloCplex cplex = new IloCplex();
+							
+			
+			//System.out.println(lineString);
+			int n = nodes.size();
+			int m = edges.size();
+			//int b = m - 1; /*number of bends in a path*/
+			
+			/*********COORDINATES CONSTRAINT*****************/
+	       	        
+			IloNumVar[] x  = cplex.numVarArray(n, octBox.getMinX(), octBox.getMaxX());
+			IloNumVar[] y  = cplex.numVarArray(n,  octBox.getMinY(), octBox.getMaxY());
+			IloNumVar[] z1  = cplex.numVarArray(n, octBox.getMinZ1(), octBox.getMaxZ1());
+			IloNumVar[] z2  = cplex.numVarArray(n, octBox.getMinZ2(), octBox.getMaxZ2());
+			
+			
+//			IloNumVar[] x  = cplex.numVarArray(n, -Double.MAX_VALUE, Double.MAX_VALUE);
+//			IloNumVar[] y  = cplex.numVarArray(n,  -Double.MAX_VALUE, Double.MAX_VALUE);
+//			IloNumVar[] z1  = cplex.numVarArray(n,  -Double.MAX_VALUE, Double.MAX_VALUE);
+//			IloNumVar[] z2  = cplex.numVarArray(n, -Double.MAX_VALUE, Double.MAX_VALUE);
+			
+			IloNumExpr[] z1Constraint = new IloNumExpr[n];
+			IloNumExpr[] z2Constraint = new IloNumExpr[n];
+			
+			for (int i = 0; i < n; i++) {
+				/*do we need to multiply by 2?*/
+//				z1Constraint[i] = cplex.sum(x[i],y[i]);
+//				z2Constraint[i] = cplex.diff(x[i],y[i]);
+				
+//				/*do we need to multiply by 2?*/
+				z1Constraint[i] = cplex.prod(0.5,cplex.sum(x[i],y[i]));
+				z2Constraint[i] = cplex.prod(0.5, cplex.diff(x[i],y[i]));
+			}
+			
+			/*Add z constraint to model constranint*/ 
+			for (int i = 0; i < n; i++) {
+				cplex.addEq(z1[i], z1Constraint[i]);
+				cplex.addEq(z2[i], z2Constraint[i]);
+							
+				
+			}	
+			
+			/* Fix coordinates of already schematized nodes*/
+			for(int i = 0; i < n; i++) {
+				StreetNode node = nodeMap.get(nodes.get(i));
+				if(node.getxGeom() != null) {
+					cplex.addEq(x[i], node.getxGeom().getX());
+					cplex.addEq(y[i], node.getxGeom().getY());
+				}			
+			}
+			
+			
+			/*********OCTALINEARITY CONSTRAINT*****************/
+			
+			
+//			for(int i = 0; i < m; i++) {
+//				if(nodeMap.get(edges.get(i)[0]).getxGeom() != null && nodeMap.get(edges.get(i)[1]).getxGeom() != null) {
+//					cplex.addEq(x[i], nodeMap.get(nodes.get(i)).getxGeom().getX());
+//					cplex.addEq(y[i], nodeMap.get(nodes.get(i)).getxGeom().getY());
+//				}			
+//			}
+			/*sec[m][d][(pred,orig,succ)] defines the sector of the octilinear position an edges could lie
+			 * m = number of edges
+			 * d = direction of the edge 0 is going and 1 is back
+			 * (pred,orig,succ) = 0 lies on the previous sector, 1 lies ont the original best sector, and 2 lies on the succecive sector*/ 
+			int[][][] sec = new int[m][2][3];		
+			/*int[] origBestSec = new int[m];
+			int[] succBestSec = new int[m];
+			int[] predBestSec = new int[m];*/
+			
+			for (int i = 0; i < m; i++) {
+
+			
+				sec[i][0][1] = GeometricOperation.sectorOf(
+						GeometricOperation.getAngleBetweenPointsRelativeToAxisX( 
+								nodeMap.get(edges.get(i)[0]).getProjectGeom().getX(), nodeMap.get(edges.get(i)[0]).getProjectGeom().getY(),
+								nodeMap.get(edges.get(i)[1]).getProjectGeom().getX(), nodeMap.get(edges.get(i)[1]).getProjectGeom().getY()					
+								)
+						);
+				sec[i][0][0] =  Math.floorMod(sec[i][0][1] - 1, 8);
+				sec[i][0][2] =  Math.floorMod(sec[i][0][1] + 1, 8);
+				
+				
+				sec[i][1][1] = Math.floorMod(sec[i][0][1] + 4,8);
+				sec[i][1][0] = Math.floorMod(sec[i][0][0] + 4,8);
+				sec[i][1][2] = Math.floorMod(sec[i][0][2] + 4,8);
+			}
+		
+
+			
+			/*Boolean variable to restrict the orientation of the edge to orig = 1, succ = 2 and prd = 0*/
+			IloNumVar[][] alpha = new IloNumVar[m][];
+			
+			for (int i = 0; i < m; i++) {
+				alpha[i] = cplex.boolVarArray(3);
+				
+			}
+			
+			
+			IloLinearNumExpr[] constraintEdgeOrientation = new IloLinearNumExpr[m];
+			
+			for (int i = 0; i < m; i++) {
+				constraintEdgeOrientation[i] = cplex.linearNumExpr();
+				constraintEdgeOrientation[i].addTerm(1.0,alpha[i][0]);
+				constraintEdgeOrientation[i].addTerm(1.0,alpha[i][1]);
+				constraintEdgeOrientation[i].addTerm(1.0,alpha[i][2]);
+				cplex.addEq(constraintEdgeOrientation[i], 1.0);
+			}
+			
+			
+			/*Variable dir[i][j] defines the direction of of edege i (j means de drirection of the edege*/
+			IloNumVar[][] dir  = new IloNumVar[m][]; /*leave the last dimension to be defined with cplex*/
+			
+			for (int i = 0; i < m; i++) {
+				dir[i] = cplex.intVarArray(2, 0, 7);/* array of size 2 because we need uv an vu*/
+				
+			}
+			
+			
+			/*For each i ∈ {pred, orig, succ} we have the following set of constraints
+			 dir(u, v)−seciu(v) ≤M(1−αi(u, v))
+			−dir(u, v)+seciu(v) ≤M(1−αi(u, v))
+			dir(v,u)−seciv(u) ≤M(1−αi(u, v))
+			−dir(v,u)+seciv(u) ≤M(1−αi(u, v))
+			
+			∀{u, v} ∈ E,
+			
+			 *Here, if αi(u, v) = 0, the constraints in (4) are trivially fulfilled and do not influence the left-hand sides. 
+			 *On the other hand, if αi(u, v) = 1, the four inequalities are equivalent to dir(u, v) = seciu(v) and
+				dir(v,u) = seciv(u) as desired (equality
+			 *
+			 *
+			 *
+			 */
+			
+			double MDir = 8; 
+			for (int i = 0; i < m; i++) {
+
+					for (int j = 0; j < 3; j++) {
+						IloNumExpr rightSide = cplex.prod(MDir, cplex.diff(1, alpha[i][j]));
+						/*natural direction of the edge d=0*/
+						IloNumExpr leftSide1 = cplex.diff(dir[i][0], sec[i][0][j]);
+						IloNumExpr leftSide2 = cplex.diff(sec[i][0][j],  dir[i][0]);
+						/*counter direction of the edge d= 1*/
+						IloNumExpr leftSide3 = cplex.diff(dir[i][1], sec[i][1][j]);
+						IloNumExpr leftSide4 = cplex.diff(sec[i][1][j],  dir[i][1]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						cplex.addLe(leftSide3, rightSide);
+						cplex.addLe(leftSide4, rightSide);
+					
+					}
+
+			}
+			
+			/*contraints to force the correct position of the vertices
+			 * if sec original is 2 and alphaoriginal is true then forces x(u) and x(v) to equal
+			 * and y(v) > y(u)*/
+			
+			double maxAdjD = 0;
+			for (Integer[] e: edges){
+				double dist = nodeMap.get(e[0]).getProjectGeom().distance( nodeMap.get(e[1]).getProjectGeom() );
+				if(dist > maxAdjD)
+					maxAdjD=dist;
+				
+			}
+			double MAdjVertice = 2*maxAdjD; /* D max distance between two vertices*/
+			double L = adjVerticesMinDist;
+			for (int i = 0; i < m; i++) {
+
+				/*get index of edge nodes in the node list*/
+				int v1i = nodes.indexOf(edges.get(i)[0]);
+				int v2i = nodes.indexOf(edges.get(i)[1]);
+				
+				for (int j = 0; j < 3; j++) {
+					IloNumExpr rightSide, rightSide2, leftSide1, leftSide2, leftSide3;
+					/*do i need to constraint edges for both directions(sec[m][1])?*/
+					switch (sec[i][0][j]) {
+					case 0:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(y[v1i], y[v2i]);
+						leftSide2 = cplex.diff(y[v2i],  y[v1i]);
+						
+						rightSide2 = cplex.diff(L, rightSide);
+						leftSide3 = cplex.diff(x[v2i],  x[v1i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+					
+						break;
+					case 7:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(z2[v1i], z2[v2i]);
+						leftSide2 = cplex.diff(z2[v2i],  z2[v1i]);
+						
+						rightSide2 = cplex.diff(2*L, rightSide);
+						leftSide3 = cplex.diff(z1[v2i],  z1[v1i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+						break;
+						
+					case 6:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(x[v1i], x[v2i]);
+						leftSide2 = cplex.diff(x[v2i],  x[v1i]);
+						
+						rightSide2 = cplex.diff(L, rightSide);
+						leftSide3 = cplex.diff(y[v2i],  y[v1i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+
+						break;
+						
+					case 5:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(z1[v1i], z1[v2i]);
+						leftSide2 = cplex.diff(z1[v2i],  z1[v1i]);
+						
+						rightSide2 = cplex.diff(2*L, rightSide);
+						leftSide3 = cplex.diff(z2[v1i],  z2[v2i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+						break;	
+					case 4:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(y[v1i], y[v2i]);
+						leftSide2 = cplex.diff(y[v2i],  y[v1i]);
+						
+						rightSide2 = cplex.diff(L, rightSide);
+						leftSide3 = cplex.diff(x[v1i],  x[v2i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+						break;
+					case 3:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(z2[v1i], z2[v2i]);
+						leftSide2 = cplex.diff(z2[v2i],  z2[v1i]);
+						
+						rightSide2 = cplex.diff(2*L, rightSide);
+						leftSide3 = cplex.diff(z1[v1i],  z1[v2i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+						break;	
+					case 2:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(x[v1i], x[v2i]);
+						leftSide2 = cplex.diff(x[v2i],  x[v1i]);
+						
+						rightSide2 = cplex.diff(L, rightSide);
+						leftSide3 = cplex.diff(y[v1i],  y[v2i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+
+						break;	
+					case 1:
+						rightSide = cplex.prod(MAdjVertice, cplex.diff(1, alpha[i][j]));
+						leftSide1 = cplex.diff(z1[v1i], z1[v2i]);
+						leftSide2 = cplex.diff(z1[v2i],  z1[v1i]);
+						
+						rightSide2 = cplex.diff(2*L, rightSide);
+						leftSide3 = cplex.diff(z2[v2i],  z2[v1i]);
+						
+						cplex.addLe(leftSide1, rightSide);
+						cplex.addLe(leftSide2, rightSide);
+						
+						cplex.addGe(leftSide3, rightSide2);
+						break;	
+					default:
+						break;
+					}
+					
+				}
+				
+			}
+			
+			/***CIRCULAR ORDER CONSTRAINTS********/
+			ArrayList<Integer> intersectionNodeIdList = new ArrayList<Integer>();
+			
+			for(Integer nodeId: circularOrderList.keySet() ) {
+				intersectionNodeIdList.add(nodeId);
+			}
+			
+			double MCircularOrder = 17; /*Diference between 2 dir */
+			int numInterPoints = intersectionNodeIdList.size();
+			IloNumVar[][] beta = new IloNumVar[numInterPoints][];
+			IloLinearNumExpr[] constraintCircularOrder = new IloLinearNumExpr[numInterPoints];
+			for (int i = 0; i < numInterPoints; i++) {
+				
+				int degree = circularOrderList.get(intersectionNodeIdList.get(i)).size();
+				
+				beta[i] = cplex.boolVarArray(degree);
+				for(int j = 0 ; j < degree; j++)
+					beta[i][j].setName("BetaIntersect"+i+"deg"+j);
+				constraintCircularOrder[i] = cplex.linearNumExpr();
+				
+				/**only one of the beta[i] for each v incident holds 1**/
+				for(int j = 0; j < degree; j ++ )			
+					constraintCircularOrder[i].addTerm(1, beta[i][j]);
+				
+				cplex.addEq(constraintCircularOrder[i], 1.0,  "Intersec"+i+"BetaCircOrder");	
+				
+			}
+			
+			for (int i = 0; i < numInterPoints; i++) {
+				
+				int vId = intersectionNodeIdList.get(i);
+//				System.out.println();
+//				System.out.println("Route relevant point n  " + routeNodeIdList.indexOf(vId) + " of id "+vId+"  is intersection and its degree is " + circularOrderList.get(vId).size() );
+//				System.out.println("Interpoint"+i+" Intersection Id: " + vId);
+				IloNumExpr rightSide, leftSide;
+				
+				for(int j = 0; j < beta[i].length ; j ++ ){
+					int indexDirVU1 = 0, indexDirVU2 = 0;
+//					System.out.println("--Edge " + j + " and " + (j+1));
+					int u1Id, u2Id;
+					u1Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(j).getId();
+//					System.out.println("u1ID="+u1Id); 
+					/*se for vertive um orden circular seleciona u2 como o primeiro da lista*/
+					if(j < (beta[i].length -1))
+						u2Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(j + 1).getId();
+					else 
+						u2Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(0).getId();
+//					System.out.println("u2ID="+u2Id);
+					/***identify the edges (v, u1) and (v, u2)**/
+					boolean foundEdgeToU1 = false, foundEdgeToU2 = false;
+					int edgeToU1IsInverted = 0, edgeToU2IsInverted = 0;
+					
+					for(int k = 0; k < edges.size(); k++){
+
+						/*intersectionNOdeid contain only route nodes, the adj node are always edge[1]. Otherwise is necessary to check the inverse*/
+						if(edges.get(k)[0] == vId && edges.get(k)[1] == u1Id) {
+							indexDirVU1 = k;
+							foundEdgeToU1 = true;
+							edgeToU1IsInverted = 0;
+						}
+						else if(edges.get(k)[1] == vId && edges.get(k)[0] == u1Id){
+							indexDirVU1 = k;
+							foundEdgeToU1 = true;
+							edgeToU1IsInverted = 1;
+						}
+						
+						if( edges.get(k)[0] == vId && edges.get(k)[1] == u2Id ){
+							indexDirVU2 = k;
+							foundEdgeToU2 = true;
+							edgeToU2IsInverted = 0;
+						}
+						else if(edges.get(k)[1] == vId && edges.get(k)[0] == u2Id){
+							indexDirVU2 = k;
+							foundEdgeToU2 = true;
+							edgeToU2IsInverted = 1;
+						}
+						if(foundEdgeToU1 && foundEdgeToU2)
+							break;
+					}
+					
+//					System.out.println("EdgeIndex to u1ID= "+ indexDirVU1 + " found: " + foundEdgeToU1  + " is inverted: " + edgeToU1IsInverted); 
+//					System.out.println("EdgeIndex to u2ID= "+ indexDirVU2 + " found: " + foundEdgeToU2 + " is inverted: " + edgeToU2IsInverted); 
+
+					leftSide = cplex.diff(dir[indexDirVU2][edgeToU2IsInverted], dir[indexDirVU1][edgeToU1IsInverted]);
+					rightSide = cplex.diff(1,  cplex.prod(MCircularOrder, beta[i][j]));
+					cplex.addGe(leftSide, rightSide, "CircOrderIneqIntersec"+i+"Adja"+j);
+					
+
+
+				}
+				//System.out.println(); 
+
+
+			}
+			
+			/*************PROPORTION DIFFERENCE MINIMIZATION ALL EDEGES***********/
+
+			/*** lambda: binary variable to determine if (xi - xi+1) is > 0 or < 0**
+			 * lambda1 + lambda2 =1 -> if lambda1 = 1 - > lambda2 = 0 ->  (xi - xi+1) >= 0
+			 * 							else lambda1 = 0 -> lambda2 = 1 -> (xi - xi+1) < 0
+			 * 
+			 * we want dx = |xi - xi+1| -> dx >= |xi - xi+1| & dx <= |xi - xi+1|
+			 * if (xi - xi+1) >= 0 -> dx >= xi - xi+1 & dx <= xi - xi+1
+			 * if (xi - xi+1) < 0  -> dx >= -(xi - xi+1) & dx <= -(xi - xi+1) 
+			 * 
+			 * so
+			 * dx <= (xi - xi+1) + M(1-lambda1) eq1
+			 * dx >= (xi - xi+1) - M(1-lambda1) eq2
+			 * 
+			 * or
+			 * dx >= -(xi - xi+1) - M(1-lambda2) eq3
+			 * dx <= -(xi - xi+1) + M(1-lambda2) eq4
+			 * 
+			 * if lambda1 = 1 & lambda2 = 0  => constraint dx = (xi - xi+1) & e3 and eq4 are trivialy fulfiled(makes no diference) 
+			 * else lambda1 = 0 & lambda2 = 1  => constraint dx = -(xi - xi+1) & e1 and eq2 are trivialy fulfiled(makes no diference) 
+			 * 
+			 * 
+			 * 
+			 * */
+			
+			//int mP = proportionKeepingRescaledRouteDPPoints.size() -1; /*route edges number: respect order on edge list*/ 
+			
+			IloNumVar[][] xLambda = new IloNumVar[m][];
+			IloNumVar[][] yLambda = new IloNumVar[m][];
+			
+			for (int i = 0; i < m; i++) {
+				xLambda[i] = cplex.boolVarArray(2);
+				yLambda[i] = cplex.boolVarArray(2);
+				
+//				xLambda[i][0].setName("proporMinxLambda0");
+//				xLambda[i][1].setName("proporMinxLambda1");
+//				yLambda[i][0].setName("proporMinyLambda0");
+//				yLambda[i][1].setName("proporMinyLambda1");
+				
+			}
+			IloLinearNumExpr[] xLambdaConstraint = new IloLinearNumExpr[m];
+			IloLinearNumExpr[] yLambdaConstraint = new IloLinearNumExpr[m];
+			
+			for (int i = 0; i < m; i++) {
+				xLambdaConstraint[i] = cplex.linearNumExpr();
+				xLambdaConstraint[i].addTerm(1.0,xLambda[i][0]);
+				xLambdaConstraint[i].addTerm(1.0,xLambda[i][1]);
+				cplex.addEq(xLambdaConstraint[i], 1.0);
+				
+				
+				yLambdaConstraint[i] = cplex.linearNumExpr();
+				yLambdaConstraint[i].addTerm(1.0,yLambda[i][0]);
+				yLambdaConstraint[i].addTerm(1.0,yLambda[i][1]);
+				cplex.addEq(yLambdaConstraint[i], 1.0);
+				
+			}
+			
+			 
+			/*  maxAdjD distance between two adjacent vertices vertices! it was MaxD*/
+
+			//MAdjVertice = rescaledRouteLenght;
+			IloNumVar[] absoluteDiffX  = cplex.numVarArray(m, 0, 1000* maxAdjD);
+			IloNumVar[] absoluteDiffY  = cplex.numVarArray(m, 0, 1000* maxAdjD);
+			MAdjVertice = 2*maxAdjD; /* D max distance between two vertices*/
+			for (int i = 0; i < m; i++) {
+				
+				int v1Index = nodes.indexOf(edges.get(i)[0]);
+				int v2Index = nodes.indexOf(edges.get(i)[1]);	
+				
+				/***dx = |xi - xi+1|***/
+				IloNumExpr diffX = cplex.diff(x[v1Index], x[v2Index]);
+				
+				cplex.addLe(absoluteDiffX[i], cplex.sum(diffX, cplex.prod(MAdjVertice, cplex.diff(1, xLambda[i][0])))); //eq1. 
+				cplex.addGe(absoluteDiffX[i], cplex.diff(diffX, cplex.prod(MAdjVertice, cplex.diff(1, xLambda[i][0])))); //eq2.
+				
+				cplex.addGe(absoluteDiffX[i], cplex.diff(cplex.negative(diffX), cplex.prod(MAdjVertice, cplex.diff(1, xLambda[i][1])))); //eq3. 
+				cplex.addLe(absoluteDiffX[i], cplex.sum(cplex.negative(diffX), cplex.prod(MAdjVertice, cplex.diff(1, xLambda[i][1])))); //eq4.
+				
+				/***dy = |yi - yi+1|***/
+				IloNumExpr diffY = cplex.diff(y[v1Index], y[v2Index]);
+				
+				cplex.addLe(absoluteDiffY[i], cplex.sum(diffY, cplex.prod(MAdjVertice, cplex.diff(1, yLambda[i][0])))); //eq1. 
+				cplex.addGe(absoluteDiffY[i], cplex.diff(diffY, cplex.prod(MAdjVertice, cplex.diff(1, yLambda[i][0])))); //eq2.
+				
+				cplex.addGe(absoluteDiffY[i], cplex.diff(cplex.negative(diffY), cplex.prod(MAdjVertice, cplex.diff(1, yLambda[i][1])))); //eq3. 
+				cplex.addLe(absoluteDiffY[i], cplex.sum(cplex.negative(diffY), cplex.prod(MAdjVertice, cplex.diff(1, yLambda[i][1])))); //eq4.
+
+				
+				
+			}
+			/***WE have absDiffX and absDiffY
+			 * We wanto to minimize:
+			 * Abs((absDiffX[i] + absDiffY[i])L - lengthEdge[i]/L)
+			 * 
+			 * ****/
+			/**
+			 * If you are minimizing an increasing function of |x| (or maximizing a decreasing function, of course), you can always have the aboslute value of any quantity x in a lp as a variable absx such as:
+
+				absx >= x -> x<=absx
+				absx >= -x -> x >= -absx
+				{leftside = x
+				dX = absx}
+				It works because the value absx will 'tend' to its lower bound, so it will either reach x or -x.
+
+				On the other hand, if you are minimizing a decreasing function of |x|, your problem is not convex and cannot be modelled as a lp.
+			 */
+			ArrayList<Double> edgeExpectedLength = new ArrayList<Double>();
+			for (int i = 0; i < m; i++) {
+				System.out.println();
+				
+				double edgeOrginalLength = nodeMap.get(edges.get(i)[0]).getProjectGeom().distance(nodeMap.get(edges.get(i)[1]).getProjectGeom());
+				double expectedgLength = edgesXProportion.get(i)*edgeOrginalLength;
+				
+				System.out.println("origi:" + edgeOrginalLength + " expect: " + expectedgLength );
+				//edgeProportion.add(pt1.distance(pt2)/routeLenght);
+				edgeExpectedLength.add(expectedgLength);
+			}
+			IloNumVar[] absolutEdgeProportionDifference  = cplex.numVarArray(m, 0, Double.MAX_VALUE);
+			IloNumExpr[] finalEdgeManhatanLength = new IloNumExpr[m];
+			for (int i = 0; i < m; i++) {
+				finalEdgeManhatanLength[i] = cplex.sum(absoluteDiffX[i],absoluteDiffY[i]);
+				/*can I use cplex.Equal direct? yes absX and absY is always positiv*/
+				cplex.addLe(cplex.diff(finalEdgeManhatanLength[i], edgeExpectedLength.get(i)), absolutEdgeProportionDifference[i]);
+				cplex.addGe(cplex.diff(finalEdgeManhatanLength[i], edgeExpectedLength.get(i)), cplex.prod(-1, absolutEdgeProportionDifference[i]));
+			}
+			
+			IloNumExpr edgeLenghtBruteCost =  cplex.sum(absolutEdgeProportionDifference);
+
+			
+			
+			/****Edges orientation difference minimization*********/
+			IloNumVar[] dirDiff  = cplex.numVarArray(m, -7, 7);
+			for (int i = 0; i < m; i++) {
+				cplex.addEq(dirDiff[i], cplex.diff(sec[i][0][1] ,dir[i][0]));
+			}
+			
+			IloNumVar[] dirCost = cplex.boolVarArray(m);
+			for (int i = 0; i < m; i++) {
+
+				cplex.addLe(dirDiff[i],cplex.prod(8, dirCost[i]));
+				cplex.addGe(dirDiff[i],  cplex.prod(-8, dirCost[i]));
+			}
+
+			IloNumExpr sumDirBruteCost =  cplex.sum(dirCost);  
+			
+			
+			
+			/*********OBJECTIVE*****************/
+			
+		
+//			
+			double propWeight = proportionFactor*10.0;
+			double propNormalWeight = propWeight/m;
+//			//IloNumExpr sumAbsolutEdgeProportionDifferenceNormal = cplex.prod(10.0/(mP), sumAbsolutEdgeProportionDifference);			
+			IloNumExpr edgeLenghtWeightedCost = cplex.prod(propNormalWeight, edgeLenghtBruteCost);
+//			
+			double dirWeight = dirFactor*1.5;
+			double dirWeightNormalized = dirWeight/m;
+//			//IloNumExpr sumDirCostNormal = cplex.prod((5.0/m),sumDirCost);
+			IloNumExpr dirWeightedCost = cplex.prod(dirWeightNormalized,sumDirBruteCost);
+			
+			IloNumExpr objective = cplex.sum( edgeLenghtWeightedCost, dirWeightedCost ) ;
+			//IloNumExpr objective = cplex.sum(  sumDistCostFactor, sumBendCostFactor, sumDirCostFactor) ;
+
+			//IloNumExpr objective = sumBendCostFactor ;
+			//IloNumExpr objective = cplex.sum(sumXDist, sumYDist ) ;
+
+		
+			cplex.addMinimize(objective);
+			if(executionTimeLimit > 0 ){
+				double limitTimeInSeconds = ((double)(executionTimeLimit))/1000;
+				cplex.setParam(IloCplex.DoubleParam.TiLim, limitTimeInSeconds);
+			}
+			else if(executionTimeLimit <0 ){
+				//cplex.setParam(IloCplex.Param.MIP.Limits.Solutions, 1);
+				cplex.setParam(IloCplex.Param.MIP.Tolerances.MIPGap, (-(double)executionTimeLimit)/100.0);
+				report.setGap(-((double)executionTimeLimit)/100.0);
+				
+				cplex.setParam(IloCplex.DoubleParam.TiLim, 120);
+			}
+			
+
+			/*control display information*/
+			//cplex.setParam(IloCplex.Param.MIP.Display, 1);
+			boolean topologyViolation = false;
+			if(cplex.solve()){
+				
+				/*Check if there is self extra crossings*/
+				for (int i = 0; i < m; i++) {					
+					for(int j = i; j < m -1; j++){
+						
+
+						int edge1UIndex = nodes.indexOf(edges.get(i)[0]);
+						int edge1VIndex = nodes.indexOf(edges.get(i)[1]);
+
+						int edge2UIndex = nodes.indexOf(edges.get(j)[0]);
+						int edge2VIndex = nodes.indexOf(edges.get(j)[1]);
+						
+						
+						if(i!=j && edge1UIndex != edge2UIndex && edge1UIndex != edge2VIndex && edge1VIndex != edge2UIndex && edge1VIndex != edge2VIndex ) {
+							double e1x1 = cplex.getValue(x[edge1UIndex]);
+							double e1y1 = cplex.getValue(y[edge1UIndex]);
+							double e1x2 = cplex.getValue(x[edge1VIndex]);
+							double e1y2 = cplex.getValue(y[edge1VIndex]);
+							
+							double e2x1 = cplex.getValue(x[edge2UIndex]);
+							double e2y1 = cplex.getValue(y[edge2UIndex]);
+							double e2x2 = cplex.getValue(x[edge2VIndex]);
+							double e2y2 = cplex.getValue(y[edge2VIndex]);
+							
+							if(GeometricOperation.intersects(e1x1, e1y1, e1x2, e1y2,
+									e2x1, e2y1, e2x2, e2y2)) {
+								
+								topologyViolation = true;
+								System.out.println("Edges violates topology: " + i + " " + j );
+								
+								Integer[] edgeTopoViolation = new Integer[2];
+								edgeTopoViolation[0] = i;
+								edgeTopoViolation[1] = j;
+								selfEdgePaarToCheck.add(edgeTopoViolation);
+								
+							}
+							
+							
+						}
+						
+					}
+				}
+				
+				/*Check if there is  extra crossings with previous schematized edges*/
+				for (int i = 0; i < m; i++) {					
+					
+						for(int j = 0; j < minimalXEdgeSet.size(); j ++) {
+						
+							
+							int edge1UIndex = nodes.indexOf(edges.get(i)[0]);
+							int edge1VIndex = nodes.indexOf(edges.get(i)[1]);
+							
+						
+
+							double e1x1 = cplex.getValue(x[edge1UIndex]);
+							double e1y1 = cplex.getValue(y[edge1UIndex]);
+							double e1x2 = cplex.getValue(x[edge1VIndex]);
+							double e1y2 = cplex.getValue(y[edge1VIndex]);
+
+
+							StreetNode edge2U = nodeMap.get(minimalXEdgeSet.get(j)[0]);
+							StreetNode edge2V = nodeMap.get(minimalXEdgeSet.get(j)[1]);
+
+							double e2x1 = edge2U.getxGeom().getX();
+							double e2y1 = edge2U.getxGeom().getY();
+							double e2x2 = edge2V.getxGeom().getX();
+							double e2y2 = edge2V.getxGeom().getY();
+
+							if(GeometricOperation.intersects(e1x1, e1y1, e1x2, e1y2,
+									e2x1, e2y1, e2x2, e2y2)) {
+
+								topologyViolation = true;
+								System.out.println("Topology Violation with previous schematized edges:  path edge index" + i + "  topocheck edge index" + j );
+
+								Integer[] edgeTopoViolation = new Integer[2];
+								edgeTopoViolation[0] = i;
+								edgeTopoViolation[1] = j;
+								edgePaarToCheck.add(edgeTopoViolation);
+
+							}
+
+
+						}
+
+					
+				}
+				
+				
+				
+				
+			
+			
+				
+//				numInterPoints = intersectionNodeIdList.size();							
+//				for (int i = 0; i < numInterPoints; i++) {
+//					
+	//
+//					int vId = intersectionNodeIdList.get(i);
+////					System.out.println();
+////					System.out.println("Route relevant point n  " + routeNodeIdList.indexOf(vId) + " of id "+vId+"  is intersection and its degree is " + circularOrderList.get(vId).size() );
+////					System.out.println("Interpoint"+i+" Intersection Id: " + vId);
+//					
+//					for(int j = 0; j < beta[i].length ; j ++ ){
+//						int indexDirVU1 = 0, indexDirVU2 = 0;
+////						System.out.println("--Edge " + j + " and " + (j+1));
+//						int u1Id, u2Id;
+//						u1Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(j).getId();
+////						System.out.println("u1ID="+u1Id); 
+//						/*se for vertive una orden circular seleciona u2 como o primeiro da lista*/
+//						if(j < (beta[i].length -1))
+//							u2Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(j + 1).getId();
+//						else 
+//							u2Id = circularOrderList.get(intersectionNodeIdList.get(i)).get(0).getId();
+////						System.out.println("u2ID="+u2Id);
+//						/***identify the edges (v, u1) and (v, u2)**/
+//						boolean foundEdgeToU1 = false, foundEdgeToU2 = false;
+//						int edgeToU1IsInverted = 0, edgeToU2IsInverted = 0;
+//						
+//						for(int k = 0; k < edgeList.size(); k++){
+	//
+//							/*intersectionNOdeid contain only route nodes, the adj node are always edge[1]. Otherwise is necessary to check the inverse*/
+//							if(edgeList.get(k)[0] == vId && edgeList.get(k)[1] == u1Id) {
+//								indexDirVU1 = k;
+//								foundEdgeToU1 = true;
+//								edgeToU1IsInverted = 0;
+//							}
+//							else if(edgeList.get(k)[1] == vId && edgeList.get(k)[0] == u1Id){
+//								indexDirVU1 = k;
+//								foundEdgeToU1 = true;
+//								edgeToU1IsInverted = 1;
+//							}
+//							if( edgeList.get(k)[0] == vId && edgeList.get(k)[1] == u2Id ){
+//								indexDirVU2 = k;
+//								foundEdgeToU2 = true;
+//								edgeToU2IsInverted = 0;
+//							}
+//							else if(edgeList.get(k)[1] == vId && edgeList.get(k)[0] == u2Id){
+//								indexDirVU2 = k;
+//								foundEdgeToU2 = true;
+//								edgeToU2IsInverted = 1;
+//							}
+//							if(foundEdgeToU1 && foundEdgeToU2)
+//								break;
+//						}
+//						
+////						System.out.println("EdgeIndex to u1ID= "+ indexDirVU1 + " dir: " + cplex.getValue(dir[indexDirVU1][edgeToU1IsInverted]) + " found: " + foundEdgeToU1  + " is inverted: " + edgeToU1IsInverted); 
+////						System.out.println("EdgeIndex to u2ID= "+ indexDirVU2 + " dir: " + cplex.getValue(dir[indexDirVU2][edgeToU2IsInverted]) + " found: " + foundEdgeToU2 + " is inverted: " + edgeToU2IsInverted); 
+//				
+	//
+//				
+//					}
+////					System.out.println();
+//				}
+				
+	
+				
+				
+				/***UPDATED X coordinates of street nodes*/
+				for(int i = 0; i < n ; i++){
+					System.out.println("x"+ i + " =  " + cplex.getValue(x[i]) + " y"+ i + " =  " + cplex.getValue(y[i]) + " z1"+ i + " =  " + cplex.getValue(z1[i]) + " z2"+ i + " =  " + cplex.getValue(z2[i]));
+					StreetNode node = nodeMap.get(nodes.get(i));					
+					node.setxGeom(cplex.getValue(x[i]),cplex.getValue(y[i]) );
+
+				}
+				for (int i = 0; i < m ; i++){
+					//System.out.println("benDir-> =  " + cplex.getValue(bendDir[i-2]) + " bencost-> =  " + cplex.getValue(bendCost[i-2]) );
+					System.out.println("EDGE"+i+" sec =  " + sec[i][0][1] + " dir-> =  " + cplex.getValue(dir[i][0]) +  " dirCost-> =  " + cplex.getValue(dirCost[i]));
+				
+				}
+				
+				
+				
+				for (int i = 0; i < m; i++){
+					System.out.println("Edge: " + i);
+					System.out.println("AbsDiffX-> =  " + cplex.getValue(absoluteDiffX[i]) + " AbsDiffY-> =  " + cplex.getValue(absoluteDiffY[i]) );
+					System.out.println("ExpectedLength: " + edgeExpectedLength.get(i) + "Final MAnhantan length: " + cplex.getValue(finalEdgeManhatanLength[i]) + "Absolut Difference: " + cplex.getValue(absolutEdgeProportionDifference[i]));
+				}
+				
+				//System.out.println("distCost/Normal =  " + (cplex.getValue(sumXDist) + cplex.getValue(sumYDist)) + " / " +cplex.getValue(sumDistCostNormal) + " sumBendCost/Normal = " + cplex.getValue(sumBendCost)+ " / " +cplex.getValue(sumBendCostNormal) + " sumDirCost/Normal = " + cplex.getValue(sumDirCost) + " / " + cplex.getValue(sumDirCostNormal) + " sumEdgeProportionCost/Normal = " + cplex.getValue(sumAbsolutEdgeProportionDifference)+ " / " + cplex.getValue(sumAbsolutEdgeProportionDifferenceNormal) );
+				System.out.println( " dirFactor = " + dirFactor + " dirWeight = " + dirWeightNormalized + " proporFactor = " + proportionFactor + " proporWeight = " + propNormalWeight );
+				System.out.println( "Dir Final Cost= " + cplex.getValue(dirWeightedCost) + " Edge Lenght Final Cost = " + cplex.getValue(edgeLenghtWeightedCost) );
+
+				report.setOrientationSC(new SoftConstraintValues(dirWeight, dirWeightNormalized, cplex.getValue(dirWeightedCost)));
+				report.setProportionWeightSC(new SoftConstraintValues(propWeight, propNormalWeight, cplex.getValue(edgeLenghtWeightedCost)));
+				report.setObjectiveFunctionValue(cplex.getObjValue());
+				System.out.println("Final Objective = " + cplex.getObjValue());
+				
+				cplex.end();
+				end = System.currentTimeMillis();
+				System.out.println("Path Scehmatization- Nodes: " + n+ " Execution Time: "   + (end - start) );
+				report.setExecutionTime((end - start));
+				return topologyViolation;
+				
+			}
+			else{
+				
+				throw new Exception("Cannot solve MIP Model on time");
+				
+			}
+			
+			
+			
 		}
 
 
@@ -9526,12 +10403,101 @@ public class OptimizerOperator2 {
 				return sumLenghtX/sumLenghtOriginal;
 		}
 		
-		
+		private static double getProportionToPoint(double focusX, double focusY, ArrayList<Path> allPathList,
+				double maxExtend) {
+			
+			ArrayList<StreetNode[]> xEdges = new ArrayList<StreetNode[]>();
+			ArrayList<Double> xEdgeDistanceFocus = new ArrayList<Double>();
+			ArrayList<Double> edgesWeight = new ArrayList<Double>();
+			
+			for(Path p: allPathList) {
+				if(p.isWasSchematized() && !p.isChunkPath() && !p.isRouteAdjEdge()) {
+					StreetNode node1 = p.getNodeList().get(0);
+					StreetNode[] relevantEdge = new StreetNode[2];
+					relevantEdge[0] = node1;
+					for(int i = 1; i < p.getNodeList().size(); i++) {				
+						if(p.getNodeList().get(i).isRelevantRouteNode() || i == p.getNodeList().size() -1) {
+
+							StreetNode node2 = p.getNodeList().get(i);
+
+							relevantEdge[1] = node2;
+
+							Point sourceOrigPoint = relevantEdge[0].getProjectGeom();
+							Point targetOrigPoint = relevantEdge[1].getProjectGeom();
+							double edgeCenterX = (sourceOrigPoint.getCoordinate().x + targetOrigPoint.getCoordinate().x)/2;
+							double edgeCenterY = (sourceOrigPoint.getCoordinate().y + targetOrigPoint.getCoordinate().y)/2;
+
+							double dist = Math.sqrt((edgeCenterX - focusX)*(edgeCenterX - focusX) + (edgeCenterY - focusY)*(edgeCenterY - focusY));
+
+							if(dist != 0) {
+								//System.out.println("dist to path: " + dist);
+								xEdges.add(relevantEdge);						
+								xEdgeDistanceFocus.add(dist);
+								if(relevantEdge[0].isRouteNode() &&  relevantEdge[1].isRouteNode())
+									edgesWeight.add(10.0);
+								else if (p.getIsPolygon()>0)
+									edgesWeight.add(5.0);
+								else
+									edgesWeight.add(5.0);
+							}
+							else
+								System.out.println("dist to edge is fucking 0: " + dist);
+
+
+							if(i  < p.getNodeList().size() -1){
+								relevantEdge = new StreetNode[2];
+								relevantEdge[0] = node2;
+							}
+
+						}				
+
+
+					}
+					
+					
+				}
+			}
+			
+			double sumLenghtOriginal = 0;
+			double sumLenghtX = 0;
+			
+			for(int i=0; i < xEdges.size(); i++) {
+				Point sourceOrigPoint = xEdges.get(i)[0].getProjectGeom();
+				Point targetOrigPoint = xEdges.get(i)[1].getProjectGeom();
+				Point sourceXPoint = xEdges.get(i)[0].getxGeom();
+				Point targetXPoint = xEdges.get(i)[1].getxGeom();
+				
+				double normalDist = 100*xEdgeDistanceFocus.get(i)/maxExtend;
+				
+				//System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
+				
+				/**Select edges with normaldist < 50*/
+				if(normalDist < 50) {
+					
+					if(sourceXPoint != null && targetXPoint != null) {
+						double distFactor = Math.pow(normalDist, 2);
+						double lengthOrig = sourceOrigPoint.distance(targetOrigPoint);
+						double lengthX = sourceXPoint.distance(targetXPoint);
+						sumLenghtOriginal += edgesWeight.get(i)*(lengthOrig/distFactor);
+						sumLenghtX += edgesWeight.get(i)*(lengthX/distFactor);
+						//System.out.println("is inside : ");
+					}
+				}
+				
+				
+			}
+			if(Double.isNaN(sumLenghtX/sumLenghtOriginal))
+				return 1;
+			else
+				return sumLenghtX/sumLenghtOriginal;
+			
+			
+		}
+
 		
 		private static double getProportionToPoint(double focusX, double focusY, StreetNetworkTopological streetNetwork,
 				double maxExtend) {
-			
-			
+					
 			
 			ArrayList<StreetEdge> xEdges = new ArrayList<StreetEdge>();
 			ArrayList<Double> xEdgeDistanceFocus = new ArrayList<Double>();
@@ -9582,7 +10548,7 @@ public class OptimizerOperator2 {
 				
 				double normalDist = 100*xEdgeDistanceFocus.get(i)/maxExtend;
 				
-				System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
+				//System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
 				
 				/**Select edges with normaldist < 50*/
 				if(normalDist < 50) {	

@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 
 
@@ -234,6 +235,22 @@ public final class GeometricOperation {
 		for (int i = 1; i < string.size(); i ++)
 			length += string.get(i).distance(string.get(i-1));	
 		return length;
+	}
+	
+	private static double length2(ArrayList<Point> points) {
+		double length = 0;
+		for (int i = 1; i < points.size(); i ++)
+			length += points.get(i).distance(points.get(i-1));	
+		return length;
+
+	}
+	
+	private static double length2(ArrayList<Point> points, int start, int end) {
+		double length = 0;
+		for (int i = start; i < end; i ++)
+			length += points.get(i).distance(points.get(i+1));	
+		return length;
+
 	}
 	
 	
@@ -517,6 +534,38 @@ public final class GeometricOperation {
 		return sector;
 	}
 	
+	/*SchematicPoints has 2 points, original has 3 or more points. 
+	 * Return a schematic points with same number of points of original keeping the schematic at the begining and end*/
+	public static ArrayList<Point> fillLine(ArrayList<Point> schematicPoints, ArrayList<Point> originalPoints) {
+		
+		GeometryFactory geometryFactory = new GeometryFactory( new PrecisionModel(PrecisionModel.FLOATING), 4326);	
+		
+		ArrayList<Point> newPoints = new ArrayList<Point>();
+		
+		double deltaX = (schematicPoints.get( 1 ).getX() - schematicPoints.get( 0 ).getX() );
+		double deltaY =  (schematicPoints.get( 1 ).getY() - schematicPoints.get( 0 ).getY() );
+		
+		double totalLength = GeometricOperation.length2(originalPoints);
+		
+		newPoints.add(schematicPoints.get(0));
+		for (int i =  1 ; i < originalPoints.size() -1;  i ++ ){
+
+			double partLength = GeometricOperation.length2(originalPoints, 0, i);
+			double proportion = partLength/totalLength;
+
+					
+			Coordinate coord = new Coordinate(newPoints.get(0).getX() + deltaX*proportion, newPoints.get(0).getY() + deltaY*proportion);			
+			newPoints.add( geometryFactory.createPoint(coord));
+			
+			
+		}
+		newPoints.add(schematicPoints.get(1));
+		
+		return newPoints;
+	}  
+	
+
+
 	/* Distancia proporcial a distancia em ralacao ao tamanho total*/
 	public static  ArrayList<Point2D> fillLine ( ArrayList<Point2D> newSchematicPoints , ArrayList<Point2D> originalPoints ,int size , int start){
 		ArrayList<Point2D> points = new ArrayList<Point2D>();
@@ -826,7 +875,9 @@ public final class GeometricOperation {
 		return segmentE1.intersects(segmentE2);
 		
 		
-	}  
+	}
+
+
 
 //	public double  maxExtend(ArrayList<Point2D> points) {
 //		double maxX, minX, maxY, minY, diagonal;

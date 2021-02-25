@@ -323,53 +323,31 @@ public class MainController {
 				}
 
 				/***ADJUST ROUTE ADJ EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
-				for(int i = 1; i < dataController.getPathList().size(); i++){
-					Path adjPath = dataController.getPathList().get(i);
-					/** if is adj edge but not LM  control edge**/
-					if(dataController.getPathList().get(i).isRouteAdjEdge() ) {
-		
-						ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
-						System.out.println();
-//						PolyLineLayer transfPathLayer = new PolyLineLayer("TransAdjEdje " + i , 8, 2, Color.GREEN, Color.GREEN, false, true);	
-//						transfPathLayer.getLines().add(transPointList);
-//						xMap.getMapContent().getLayers().add(transfPathLayer);
-						try {
-							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-
-							dataController.getPathList().get(i).setWasSchematized(true);
-							
-						}  catch (IloException e1) {
-							e1.printStackTrace();
-						} catch (Exception e1) {
-							e1.printStackTrace();
-						}
-					}
-				}
-
 				/***ADJUST CHUCK EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
 				for(int i = 1; i < dataController.getPathList().size(); i++){
-					if(dataController.getPathList().get(i).isChunkPath()) {
+					if(dataController.getPathList().get(i).isChunkPath() || dataController.getPathList().get(i).isRouteAdjEdge() ) {
 //						System.out.println("Adjusting ADjPath " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
-						Path adjPath = dataController.getPathList().get(i);
-						if( adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0) {
-							System.out.println("this is LM control edge");
-						}
+						//Path adjPath = dataController.getPathList().get(i);
+//						if( adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0) {
+//							System.out.println("this is LM control edge");
+//						}
 						//ArrayList<Point2D> transPointList = lt.transformRouteAdjEdgeFixDist(adjPath , 27*adjToRouteEdgesMinLength);
-						ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
+//						ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
 //						System.out.println();
 ////						PolyLineLayer transfPathLayer = new PolyLineLayer("TransAdjEdje " + i , 8, 2, Color.GREEN, Color.GREEN, false, true);	
 ////						transfPathLayer.getLines().add(transPointList);
 ////						xMap.getMapContent().getLayers().add(transfPathLayer);
-						try {
-							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-
-							dataController.getPathList().get(i).setWasSchematized(true);
-							
-						}  catch (IloException e1) {
-							e1.printStackTrace();
-						} catch (Exception e1) {
-							e1.printStackTrace();
-						}
+//						try {
+//							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//
+//							
+//							
+//						}  catch (IloException e1) {
+//							e1.printStackTrace();
+//						} catch (Exception e1) {
+//							e1.printStackTrace();
+//						}
+						dataController.getPathList().get(i).setWasSchematized(true);
 					}
 				}
 				
@@ -377,35 +355,38 @@ public class MainController {
 				if(mainFrame.getCbXIncorrectsNetwork().isSelected() || mainFrame.getCbXallNetwork().isSelected()) {
 					ArrayList<Path> pathsToSchematizeTogether = new ArrayList<Path>();
 					for(int i = 1; i < dataController.getPathList().size(); i++){
-					//System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
-										
+						//System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
+
 						if(!dataController.getPathList().get(i).isChunkPath() && !dataController.getPathList().get(i).isRouteAdjEdge() && !(dataController.getPathList().get(i).getIsPolygon()>0)){
-							
-							
+
 							pathsToSchematizeTogether.add(dataController.getPathList().get(i));
 						}		
 					}
-						
-						try {
-							OptimizerOperator2.networkOptimizerLazy(pathsToSchematizeTogether,  dataController.getPathList(),  
-									dataController.getStreetNodeMap(), 
-									dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent(),
-									mainFrame.getSliderProportionNetwork().getValue(),
-									mainFrame.getSliderEdgeOrientationNetwork().getValue(),
-									mainFrame.getCbCheckSelfTopology().isSelected(),
-									mainFrame.getCbCheckTopology().isSelected(),
-									minDistToRoute,
-									Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitNetwork().getText()),
-									resultReport);
-
-							//dataController.getPathList().get(i).setWasSchematized( true );
-
-						}  catch (IloException e1) {
-							e1.printStackTrace();
-						} catch (Exception e1) {
-							e1.printStackTrace();
-						}
 					
+					try {
+						OptimizerOperator2.networkOptimizerLazy(pathsToSchematizeTogether,  dataController.getPathList(),  dataController.getRoute(),
+								dataController.getStreetNodeMap(), 
+								dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent(),
+								mainFrame.getSliderProportionNetwork().getValue(),
+								mainFrame.getSliderEdgeOrientationNetwork().getValue(),
+								mainFrame.getCbCheckSelfTopology().isSelected(),
+								mainFrame.getCbCheckTopology().isSelected(),
+								minDistToRoute,
+								adjVerticesMinDist,
+								dataController.getRouteRescaleLengthProportion(),
+								Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitNetwork().getText()),
+								resultReport);
+
+						//dataController.getPathList().get(i).setWasSchematized( true );
+
+					}  catch (IloException e1) {
+						e1.printStackTrace();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+					
+					
+
 
 				}
 
@@ -417,394 +398,394 @@ public class MainController {
 				
 				
 				/***PATHSs SCHEMATIZATION***/
-				for(int i = 1; i < dataController.getPathList().size(); i++){
-					//					System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
-
-					if(!dataController.getPathList().get(i).isRouteAdjEdge()){
-
-						
-
-						/****POLYGONA PATHS***/
-						if(dataController.getPathList().get(i).getIsPolygon()>0) {
-							PolygonalTopo pt = null;
-							for(int j = 0;  j < dataController.getPolygonalTopoList().size(); j++) {
-								/**ConvexHullText*/
-								//	ConvexHull ch = new ConvexHull(dataController.getPathList().get(i).asLineString(1));
-								//	PolyLineLayer convexHullLayer = new PolyLineLayer("ConvexPath " + i , 8, 2, Color.ORANGE, Color.ORANGE, true, true);	
-								//	convexHullLayer.getLines().add(GeoConvertionsOperations.JTSGeometryToJavaD2(ch.getConvexHull()));
-								//	xMap.getMapContent().getLayers().add(convexHullLayer);
-								if (dataController.getPolygonalTopoList().get(j).getPolygonalFeature().getId() == dataController.getPathList().get(i).getIsPolygon()){
-									pt = dataController.getPolygonalTopoList().get(j);
-									break;
-								}
-							}
-							System.out.println(" \n \nSchematizing Landmark " + pt.getPolygonalFeature().getName() + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).asLineString(0).getLength() );
-							
-							PathReport resultPathReport = new PathReport();
-							resultPathReport.setPathName(pt.getPolygonalFeature().getName());
-							resultPathReport.setPathId(String.valueOf(i));				
-							double extendLimit = 0.05;
-							/****DISCONNECTED POLYGONAL PATHS***/
-							if(	pt.getType() == PolygonalTopo.PASSING_ALONG_LEFT || 
-									pt.getType() == PolygonalTopo.PASSING_ALONG_RIGHT ||
-									pt.getType() == PolygonalTopo.PASSING_ALONG_UNKNOW  
-									) {
-
-								//								double proportion = OptimizerOperator2.getPathProportion(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-								//								System.out.println("PROPORTION: " + proportion);
-								
-								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-
-								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) ,pt.getType(), proportion );
-																
-								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
-								transfPathLayer.getLines().add(transPointList);
-								xMap.getMapContent().getLayers().add(transfPathLayer);						
-								
-								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
-								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
-								
-
-								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
-								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
-								xMap.getMapContent().getLayers().add(OBBOXLayer);
-								
-								
-								double originalLenght = GeometricOperation.length(dataController.getPathList().get(i).asJava2DList(1));
-								double transformedLendth = GeometricOperation.length(transPointList);
-								double bestProportion = ((transformedLendth + originalLenght*proportion)/2)/transformedLendth;
-							    //bestProportion = 1;
-								//double bestProportion2 = 1/2 + (originalLenght*proportion)/2*transformedLendth;
-								
-								System.out.println("Original Length: " + GeometricOperation.length(dataController.getPathList().get(i).asJava2DList(1)));
-								System.out.println("TransLegnt Length: " + GeometricOperation.length(transPointList));								
-								System.out.println("PROPORTION: " + proportion);
-								System.out.println("PROPORTION Best: " + bestProportion);
-								
-								
-								if(mainFrame.getCbXIncorrects().isSelected() || mainFrame.getCbXall().isSelected()) {
-									try {
-										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), 
-												mainFrame.getSliderBendFactorRegion().getValue(),
-												mainFrame.getSliderDistFactorRegion().getValue(),
-												mainFrame.getSliderProportionRegion().getValue(),
-												mainFrame.getSliderEdgeOrientationRegion().getValue(),
-												mainFrame.getCbCheckSelfTopology().isSelected(),
-												mainFrame.getCbCheckTopology().isSelected(),
-												minDistToRoute,
-												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
-												resultPathReport);
-
-										dataController.getPathList().get(i).setWasSchematized( true );
-
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-
-								}
-								else {
-
-									try {
-										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-								}
-
-
-							}
-							/****GLOBAL POLYGONAL PATHS***/
-							else if(pt.getType() == PolygonalTopo.ROUTE_IS_INSIDE||
-									pt.getType() == PolygonalTopo.GLOBAL 
-									) {
-
-								//								double proportion = OptimizerOperator2.getPathProportion(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-								//								System.out.println("PROPORTION: " + proportion);
-													
-								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-								
-								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) , pt.getType(), proportion );
-
-								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
-								transfPathLayer.getLines().add(transPointList);
-								xMap.getMapContent().getLayers().add(transfPathLayer);
-
-
-								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
-								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
-								
-
-								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);
-								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
-								xMap.getMapContent().getLayers().add(OBBOXLayer);
-								//dataController.getRoute().getxGeom().intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList));
-																								
-								if(
-										mainFrame.getCbXall().isSelected() ||  
-										(mainFrame.getCbXIncorrects().isSelected() &&
-												dataController.getRoute().getRoutePath().asLineString(2).intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList))) ) {
-
-									try {
-										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), 
-												mainFrame.getSliderBendFactorRegion().getValue(),
-												mainFrame.getSliderDistFactorRegion().getValue(),
-												mainFrame.getSliderProportionRegion().getValue(),
-												mainFrame.getSliderEdgeOrientationRegion().getValue(),
-												mainFrame.getCbCheckSelfTopology().isSelected(),
-												mainFrame.getCbCheckTopology().isSelected(),
-												adjVerticesMinDist,
-												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
-												resultPathReport);
-
-										dataController.getPathList().get(i).setWasSchematized( true );
-
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-
-
-								}
-								else {
-
-									try {
-										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-
-
-								}
-
-							}
-							/****CROSSED POLYGONAL PATHS***/
-							else if(pt.getType() == PolygonalTopo.SIMPLE_CROSSING ||
-									pt.getType() ==  PolygonalTopo.ROUTE_ENDS_AT ||
-									pt.getType() ==  PolygonalTopo.ROUTE_STARTS_AT
-									) {
-								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-//								System.out.println("PROPORTION: " + proportion);
-								ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
-								/*put layer trans path*/
-								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
-								transfPathLayer.getLines().add(transPointList);
-								xMap.getMapContent().getLayers().add(transfPathLayer);
-																
+//				for(int i = 1; i < dataController.getPathList().size(); i++){
+//					//					System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
 //
-								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
-								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
-
+//					if(!dataController.getPathList().get(i).isRouteAdjEdge()){
 //
-//								PolyLineLayer topocheckLayer = new PolyLineLayer("TopoCheckLayerPath " + i , 8, 5, Color.RED, Color.RED, false, false);	
-//								PointLayer edgesNodesTopochecker = new PointLayer("PointTopoCheckLayerPath " + i , 8.1, 4,7, Color.RED, Color.RED, false);									
-//	
+//						
+//
+//						/****POLYGONA PATHS***/
+//						if(dataController.getPathList().get(i).getIsPolygon()>0) {
+//							PolygonalTopo pt = null;
+//							for(int j = 0;  j < dataController.getPolygonalTopoList().size(); j++) {
+//								/**ConvexHullText*/
+//								//	ConvexHull ch = new ConvexHull(dataController.getPathList().get(i).asLineString(1));
+//								//	PolyLineLayer convexHullLayer = new PolyLineLayer("ConvexPath " + i , 8, 2, Color.ORANGE, Color.ORANGE, true, true);	
+//								//	convexHullLayer.getLines().add(GeoConvertionsOperations.JTSGeometryToJavaD2(ch.getConvexHull()));
+//								//	xMap.getMapContent().getLayers().add(convexHullLayer);
+//								if (dataController.getPolygonalTopoList().get(j).getPolygonalFeature().getId() == dataController.getPathList().get(i).getIsPolygon()){
+//									pt = dataController.getPolygonalTopoList().get(j);
+//									break;
+//								}
+//							}
+//							System.out.println(" \n \nSchematizing Landmark " + pt.getPolygonalFeature().getName() + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).asLineString(0).getLength() );
+//							
+//							PathReport resultPathReport = new PathReport();
+//							resultPathReport.setPathName(pt.getPolygonalFeature().getName());
+//							resultPathReport.setPathId(String.valueOf(i));				
+//							double extendLimit = 0.05;
+//							/****DISCONNECTED POLYGONAL PATHS***/
+//							if(	pt.getType() == PolygonalTopo.PASSING_ALONG_LEFT || 
+//									pt.getType() == PolygonalTopo.PASSING_ALONG_RIGHT ||
+//									pt.getType() == PolygonalTopo.PASSING_ALONG_UNKNOW  
+//									) {
+//
+//								//								double proportion = OptimizerOperator2.getPathProportion(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+//								//								System.out.println("PROPORTION: " + proportion);
+//								
+//								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+//
+//								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) ,pt.getType(), proportion );
+//																
+//								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
+//								transfPathLayer.getLines().add(transPointList);
+//								xMap.getMapContent().getLayers().add(transfPathLayer);						
+//								
+//								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
+//								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
+//								
+//
 //								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
 //								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
 //								xMap.getMapContent().getLayers().add(OBBOXLayer);
-
-//								for(Path p2: dataController.getPathList()) {
-//									if(p2.isWasSchematized()) {
-//										PointsPolar polarPoints = new PointsPolar();
-//										polarPoints  = GeometricOperation.toPolar(p2.asJava2DList(2));
-//										for(int k = 0; k < p2.getNodeList().size() - 1; k++) {
-//											if(!dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k)) && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k +1))) {
-//												
-//												if (boundingPolygon.contains( p2.getNodeList().get(k).getxGeom()  ) || boundingPolygon.contains( p2.getNodeList().get(k +1).getxGeom() )){
-//													int indexU = k;
-//													int indexV = k+1;
-//													boolean foundBend = false; 
-//													while(!foundBend ) {
-//														if(indexV < p2.getNodeList().size() -1 && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(indexV + 1))
-//																&& Math.abs(polarPoints.getPoints().get(indexV -1).getTheta() - polarPoints.getPoints().get(indexV).getTheta()) < 0.001
-//																&& boundingPolygon.contains( p2.getNodeList().get(indexV + 1).getxGeom()  ))
-//															indexV++;
-//														else {
-//															
-//															ArrayList<Point2D> edgeTopo = new ArrayList<Point2D>();
-//															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
-//															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
-//															topocheckLayer.getLines().add(edgeTopo);
-//															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
-//															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
-//															foundBend = true;
-//															k = indexV -1;
-//														}
-//													}																																				
-//													
-//												}
-//											}
-//																	
-//										}
+//								
+//								
+//								double originalLenght = GeometricOperation.length(dataController.getPathList().get(i).asJava2DList(1));
+//								double transformedLendth = GeometricOperation.length(transPointList);
+//								double bestProportion = ((transformedLendth + originalLenght*proportion)/2)/transformedLendth;
+//							    //bestProportion = 1;
+//								//double bestProportion2 = 1/2 + (originalLenght*proportion)/2*transformedLendth;
+//								
+//								System.out.println("Original Length: " + GeometricOperation.length(dataController.getPathList().get(i).asJava2DList(1)));
+//								System.out.println("TransLegnt Length: " + GeometricOperation.length(transPointList));								
+//								System.out.println("PROPORTION: " + proportion);
+//								System.out.println("PROPORTION Best: " + bestProportion);
+//								
+//								
+//								if(mainFrame.getCbXIncorrects().isSelected() || mainFrame.getCbXall().isSelected()) {
+//									try {
+//										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
+//												dataController.getStreetNodeMap(), 
+//												mainFrame.getSliderBendFactorRegion().getValue(),
+//												mainFrame.getSliderDistFactorRegion().getValue(),
+//												mainFrame.getSliderProportionRegion().getValue(),
+//												mainFrame.getSliderEdgeOrientationRegion().getValue(),
+//												mainFrame.getCbCheckSelfTopology().isSelected(),
+//												mainFrame.getCbCheckTopology().isSelected(),
+//												minDistToRoute,
+//												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
+//												resultPathReport);
+//
+//										dataController.getPathList().get(i).setWasSchematized( true );
+//
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}
+//
+//								}
+//								else {
+//
+//									try {
+//										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
 //									}
 //								}
+//
+//
+//							}
+//							/****GLOBAL POLYGONAL PATHS***/
+//							else if(pt.getType() == PolygonalTopo.ROUTE_IS_INSIDE||
+//									pt.getType() == PolygonalTopo.GLOBAL 
+//									) {
+//
+//								//								double proportion = OptimizerOperator2.getPathProportion(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+//								//								System.out.println("PROPORTION: " + proportion);
+//													
+//								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
 //								
-//								xMap.getMapContent().getLayers().add(topocheckLayer);
-//								xMap.getMapContent().getLayers().add(edgesNodesTopochecker);
-															
-								if( mainFrame.getCbXall().isSelected() ||
-										(mainFrame.getCbXIncorrects().isSelected() && 
-										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
-//									if(dataController.getPathList().get(i).getNodeList().size() < 10) {
-									try {
-										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(), 
-												mainFrame.getSliderBendFactorRegion().getValue(),
-												mainFrame.getSliderDistFactorRegion().getValue(),
-												mainFrame.getSliderProportionRegion().getValue(),
-												mainFrame.getSliderEdgeOrientationRegion().getValue(),
-												mainFrame.getCbCheckSelfTopology().isSelected(),
-												mainFrame.getCbCheckTopology().isSelected(),
-												adjVerticesMinDist,
-												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
-												resultPathReport);										
-					
-										dataController.getPathList().get(i).setWasSchematized( true );
-										
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-
-								}
-								else {
-
-									try {
-										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-										
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-
-										e1.printStackTrace();
-									}
-								}
-
-							}
-							/****CONNECTED POLYGONAL PATHS***/
-							else {
-
-								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-//								System.out.println("PROPORTION: " + proportion);
-								ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
-								/*put layer trans path*/
-								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, false);	
-								transfPathLayer.getLines().add(transPointList);
-								xMap.getMapContent().getLayers().add(transfPathLayer);
-								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
-								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
-								
-								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);
-								transfPathLayer.getLines().add(octBox.getBoundingPolygon());
-								xMap.getMapContent().getLayers().add(OBBOXLayer);
-								
-								if( mainFrame.getCbXall().isSelected() ||
-										(mainFrame.getCbXIncorrects().isSelected() &&
-										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
-									try {
-										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
-												dataController.getStreetNodeMap(),
-												mainFrame.getSliderBendFactorRegion().getValue(),
-												mainFrame.getSliderDistFactorRegion().getValue(),
-												mainFrame.getSliderProportionRegion().getValue(),
-												mainFrame.getSliderEdgeOrientationRegion().getValue(),
-												mainFrame.getCbCheckSelfTopology().isSelected(),
-												mainFrame.getCbCheckTopology().isSelected(),
-												adjVerticesMinDist,
-												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
-												resultPathReport);
-										
-										dataController.getPathList().get(i).setWasSchematized( true );
-										
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}									
-
-								}
-								
-								else {
-									try {
-										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-									}  catch (IloException e1) {
-										e1.printStackTrace();
-									} catch (Exception e1) {
-										e1.printStackTrace();
-									}
-								}
-
-							}
-
-							if(resultPathReport.getObjectiveFunctionValue() > 0)
-								resultReport.getPathReportList().add(resultPathReport);
-						}
-						/**END POLYGONAL PATHS**/
-						/****STREET PATHS***/
-						else {
-							System.out.println("Street path: " + i + " nodes: " + dataController.getPathList().get(i).getNodeList().size());
-							/***Stop here. I was using getPathProportion() of getPathProportion3();**/
-							double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
-							System.out.println("PROPORTION: " + proportion);
-							ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
-							//							PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, true);	
-							//							transfPathLayer.getLines().add(transPointList);
-							//							xMap.getMapContent().getLayers().add(transfPathLayer);
-							
-							if( dataController.getPathList().get(i).getNodeList().size() > 1 && (mainFrame.getCbXallNetwork().isSelected() ||
-									(mainFrame.getCbXIncorrectsNetwork().isSelected() &&
-									dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1))))))) {
-								try {
-									OptimizerOperator2.streetPathOptimizer3DirTopoRelevant(dataController.getPathList().get(i), dataController.getPathList(), transPointList, dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
-											mainFrame.getSliderBendFactorNetwork().getValue(),
-											mainFrame.getSliderDistFactorNetwork().getValue(),
-											mainFrame.getSliderProportionNetwork().getValue(),
-											mainFrame.getSliderEdgeOrientationNetwork().getValue(),
-											mainFrame.getCbCheckSelfTopologyNetwork().isSelected(),
-											mainFrame.getCbCheckTopologyNetwork().isSelected(),
-											adjVerticesMinDist,
-											Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()));
-									
-									dataController.getPathList().get(i).setWasSchematized( true );
-									
-								}  catch (IloException e1) {
-									e1.printStackTrace();
-								} catch (Exception e1) {
-									e1.printStackTrace();
-								}
-								
-
-							}
-							
-							else {
-								try {
-									OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-								}  catch (IloException e1) {
-									e1.printStackTrace();
-								} catch (Exception e1) {
-									e1.printStackTrace();
-								}
-							}
-
-
-
-						}
-
-
-
-
-					}
-
-				}
+//								ArrayList<Point2D> transPointList = lt.transformFullPolygon(dataController.getPathList().get(i) , pt.getType(), proportion );
+//
+//								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
+//								transfPathLayer.getLines().add(transPointList);
+//								xMap.getMapContent().getLayers().add(transfPathLayer);
+//
+//
+//								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
+//								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
+//								
+//
+//								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);
+//								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
+//								xMap.getMapContent().getLayers().add(OBBOXLayer);
+//								//dataController.getRoute().getxGeom().intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList));
+//																								
+//								if(
+//										mainFrame.getCbXall().isSelected() ||  
+//										(mainFrame.getCbXIncorrects().isSelected() &&
+//												dataController.getRoute().getRoutePath().asLineString(2).intersects(GeoConvertionsOperations.Java2DToJTSLineString(transPointList))) ) {
+//
+//									try {
+//										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
+//												dataController.getStreetNodeMap(), 
+//												mainFrame.getSliderBendFactorRegion().getValue(),
+//												mainFrame.getSliderDistFactorRegion().getValue(),
+//												mainFrame.getSliderProportionRegion().getValue(),
+//												mainFrame.getSliderEdgeOrientationRegion().getValue(),
+//												mainFrame.getCbCheckSelfTopology().isSelected(),
+//												mainFrame.getCbCheckTopology().isSelected(),
+//												adjVerticesMinDist,
+//												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
+//												resultPathReport);
+//
+//										dataController.getPathList().get(i).setWasSchematized( true );
+//
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}
+//
+//
+//								}
+//								else {
+//
+//									try {
+//										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}
+//
+//
+//								}
+//
+//							}
+//							/****CROSSED POLYGONAL PATHS***/
+//							else if(pt.getType() == PolygonalTopo.SIMPLE_CROSSING ||
+//									pt.getType() ==  PolygonalTopo.ROUTE_ENDS_AT ||
+//									pt.getType() ==  PolygonalTopo.ROUTE_STARTS_AT
+//									) {
+//								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+////								System.out.println("PROPORTION: " + proportion);
+//								ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
+//								/*put layer trans path*/
+//								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 3, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
+//								transfPathLayer.getLines().add(transPointList);
+//								xMap.getMapContent().getLayers().add(transfPathLayer);
+//																
+////
+//								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
+//								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
+//
+////
+////								PolyLineLayer topocheckLayer = new PolyLineLayer("TopoCheckLayerPath " + i , 8, 5, Color.RED, Color.RED, false, false);	
+////								PointLayer edgesNodesTopochecker = new PointLayer("PointTopoCheckLayerPath " + i , 8.1, 4,7, Color.RED, Color.RED, false);									
+////	
+////								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);	
+////								OBBOXLayer.getLines().add(octBox.getBoundingPolygon());
+////								xMap.getMapContent().getLayers().add(OBBOXLayer);
+//
+////								for(Path p2: dataController.getPathList()) {
+////									if(p2.isWasSchematized()) {
+////										PointsPolar polarPoints = new PointsPolar();
+////										polarPoints  = GeometricOperation.toPolar(p2.asJava2DList(2));
+////										for(int k = 0; k < p2.getNodeList().size() - 1; k++) {
+////											if(!dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k)) && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(k +1))) {
+////												
+////												if (boundingPolygon.contains( p2.getNodeList().get(k).getxGeom()  ) || boundingPolygon.contains( p2.getNodeList().get(k +1).getxGeom() )){
+////													int indexU = k;
+////													int indexV = k+1;
+////													boolean foundBend = false; 
+////													while(!foundBend ) {
+////														if(indexV < p2.getNodeList().size() -1 && !dataController.getPathList().get(i).getNodeList().contains(p2.getNodeList().get(indexV + 1))
+////																&& Math.abs(polarPoints.getPoints().get(indexV -1).getTheta() - polarPoints.getPoints().get(indexV).getTheta()) < 0.001
+////																&& boundingPolygon.contains( p2.getNodeList().get(indexV + 1).getxGeom()  ))
+////															indexV++;
+////														else {
+////															
+////															ArrayList<Point2D> edgeTopo = new ArrayList<Point2D>();
+////															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
+////															edgeTopo.add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
+////															topocheckLayer.getLines().add(edgeTopo);
+////															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexU).getxGeom()));
+////															edgesNodesTopochecker.getPoints().add(GeoConvertionsOperations.PointJTSGeometryToJava2D(p2.getNodeList().get(indexV).getxGeom()));
+////															foundBend = true;
+////															k = indexV -1;
+////														}
+////													}																																				
+////													
+////												}
+////											}
+////																	
+////										}
+////									}
+////								}
+////								
+////								xMap.getMapContent().getLayers().add(topocheckLayer);
+////								xMap.getMapContent().getLayers().add(edgesNodesTopochecker);
+//															
+//								if( mainFrame.getCbXall().isSelected() ||
+//										(mainFrame.getCbXIncorrects().isSelected() && 
+//										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
+////									if(dataController.getPathList().get(i).getNodeList().size() < 10) {
+//									try {
+//										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt , dataController.getPathList(), transPointList, 1, boundingPolygon,
+//												dataController.getStreetNodeMap(), 
+//												mainFrame.getSliderBendFactorRegion().getValue(),
+//												mainFrame.getSliderDistFactorRegion().getValue(),
+//												mainFrame.getSliderProportionRegion().getValue(),
+//												mainFrame.getSliderEdgeOrientationRegion().getValue(),
+//												mainFrame.getCbCheckSelfTopology().isSelected(),
+//												mainFrame.getCbCheckTopology().isSelected(),
+//												adjVerticesMinDist,
+//												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
+//												resultPathReport);										
+//					
+//										dataController.getPathList().get(i).setWasSchematized( true );
+//										
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}
+//
+//								}
+//								else {
+//
+//									try {
+//										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//										
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//
+//										e1.printStackTrace();
+//									}
+//								}
+//
+//							}
+//							/****CONNECTED POLYGONAL PATHS***/
+//							else {
+//
+//								double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+////								System.out.println("PROPORTION: " + proportion);
+//								ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
+//								/*put layer trans path*/
+//								PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, false);	
+//								transfPathLayer.getLines().add(transPointList);
+//								xMap.getMapContent().getLayers().add(transfPathLayer);
+//								OctlinearBoundingBox octBox = new OctlinearBoundingBox(transPointList, 2*minNonAdjEdgeDist, extendLimit +0.1, 0);
+//								Polygon boundingPolygon = (Polygon)GeoConvertionsOperations.Java2DToJTSGeometry( octBox.getBoundingPolygon(), Geometries.POLYGON);
+//								
+//								PolyLineLayer OBBOXLayer = new PolyLineLayer("OBBOXPath " + i , 8, 2, Color.DARK_GRAY, Color.DARK_GRAY, false, false);
+//								transfPathLayer.getLines().add(octBox.getBoundingPolygon());
+//								xMap.getMapContent().getLayers().add(OBBOXLayer);
+//								
+//								if( mainFrame.getCbXall().isSelected() ||
+//										(mainFrame.getCbXIncorrects().isSelected() &&
+//										dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1)))))) {
+//									try {
+//										OptimizerOperator2.landmarkAbstractOptimizerLazy(dataController.getPathList().get(i), pt ,dataController.getPathList(), transPointList, 1, boundingPolygon,
+//												dataController.getStreetNodeMap(),
+//												mainFrame.getSliderBendFactorRegion().getValue(),
+//												mainFrame.getSliderDistFactorRegion().getValue(),
+//												mainFrame.getSliderProportionRegion().getValue(),
+//												mainFrame.getSliderEdgeOrientationRegion().getValue(),
+//												mainFrame.getCbCheckSelfTopology().isSelected(),
+//												mainFrame.getCbCheckTopology().isSelected(),
+//												adjVerticesMinDist,
+//												Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()),
+//												resultPathReport);
+//										
+//										dataController.getPathList().get(i).setWasSchematized( true );
+//										
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}									
+//
+//								}
+//								
+//								else {
+//									try {
+//										OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//									}  catch (IloException e1) {
+//										e1.printStackTrace();
+//									} catch (Exception e1) {
+//										e1.printStackTrace();
+//									}
+//								}
+//
+//							}
+//
+//							if(resultPathReport.getObjectiveFunctionValue() > 0)
+//								resultReport.getPathReportList().add(resultPathReport);
+//						}
+//						/**END POLYGONAL PATHS**/
+//						/****STREET PATHS***/
+//						else {
+//							System.out.println("Street path: " + i + " nodes: " + dataController.getPathList().get(i).getNodeList().size());
+//							/***Stop here. I was using getPathProportion() of getPathProportion3();**/
+//							double proportion = OptimizerOperator2.getPathProportion3(dataController.getPathList().get(i),dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent());
+//							System.out.println("PROPORTION: " + proportion);
+//							ArrayList<Point2D> transPointList = lt.transformNetworkPath(dataController.getPathList().get(i) , proportion);
+//							//							PolyLineLayer transfPathLayer = new PolyLineLayer("TransPath " + i , 8, 2, Color.LIGHT_GRAY, Color.LIGHT_GRAY, false, true);	
+//							//							transfPathLayer.getLines().add(transPointList);
+//							//							xMap.getMapContent().getLayers().add(transfPathLayer);
+//							
+//							if( dataController.getPathList().get(i).getNodeList().size() > 1 && (mainFrame.getCbXallNetwork().isSelected() ||
+//									(mainFrame.getCbXIncorrectsNetwork().isSelected() &&
+//									dataController.getRoute().getRoutePath().asLineString(2).crosses(GeoConvertionsOperations.Java2DToJTSLineString(new ArrayList<Point2D>(transPointList.subList(1, transPointList.size()-1))))))) {
+//								try {
+//									OptimizerOperator2.streetPathOptimizer3DirTopoRelevant(dataController.getPathList().get(i), dataController.getPathList(), transPointList, dataController.getStreetNodeMap(), dataController.getStreetNetwork(), 
+//											mainFrame.getSliderBendFactorNetwork().getValue(),
+//											mainFrame.getSliderDistFactorNetwork().getValue(),
+//											mainFrame.getSliderProportionNetwork().getValue(),
+//											mainFrame.getSliderEdgeOrientationNetwork().getValue(),
+//											mainFrame.getCbCheckSelfTopologyNetwork().isSelected(),
+//											mainFrame.getCbCheckTopologyNetwork().isSelected(),
+//											adjVerticesMinDist,
+//											Integer.parseInt(mainFrame.getTextFieldExecutionTimeLimitRegion().getText()));
+//									
+//									dataController.getPathList().get(i).setWasSchematized( true );
+//									
+//								}  catch (IloException e1) {
+//									e1.printStackTrace();
+//								} catch (Exception e1) {
+//									e1.printStackTrace();
+//								}
+//								
+//
+//							}
+//							
+//							else {
+//								try {
+//									OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
+//								}  catch (IloException e1) {
+//									e1.printStackTrace();
+//								} catch (Exception e1) {
+//									e1.printStackTrace();
+//								}
+//							}
+//
+//
+//
+//						}
+//
+//
+//
+//
+//					}
+//
+//				}
 				/**END NETWORK SHCEMATIZATION**/
 				
 				
@@ -839,7 +820,7 @@ public class MainController {
 				
 				end = System.currentTimeMillis();
 				System.out.println( resultReport );
-				System.out.println( resultReport.toCSV() );
+				//System.out.println( resultReport.toCSV() );
 				System.out.println("Total Schematization time: " + (end - start) );
 				this.addOriginalXRouteLayers();
 				//this.addXDisconectedPolygonLayers();

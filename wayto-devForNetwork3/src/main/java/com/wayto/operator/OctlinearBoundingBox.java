@@ -94,6 +94,79 @@ public class OctlinearBoundingBox {
 		
 	}
 	
+	/*BoundingBox as minimum boudning circle*/
+	public OctlinearBoundingBox(ArrayList<Point2D> polyLine,  double extendLimit) {
+		super();
+
+
+		maxX = polyLine.get(0).getX();
+		minX = polyLine.get(0).getX();
+		maxY = polyLine.get(0).getY();
+		minY = polyLine.get(0).getY();
+		maxZ1 = polyLine.get(0).getX() + polyLine.get(0).getY();
+		minZ1 = maxZ1;
+		maxZ2 = polyLine.get(0).getX() - polyLine.get(0).getY();
+		minZ2 = maxZ2;
+		maxAdjDist = polyLine.get(0).distance(polyLine.get(1));
+		for (int i = 1; i < polyLine.size(); i++) {
+			
+			double x =polyLine.get(i).getX();
+			double y =polyLine.get(i).getY();
+		
+			double z1 = x + y;
+			double z2 = x - y;
+			maxX = (x > maxX) ? x : maxX;
+			minX = (x < minX) ? x : minX;
+			maxY = (y > maxY) ? y : maxY;
+			minY = (y < minY) ? y : minY;
+			maxZ1 = ( z1 > maxZ1) ? z1 : maxZ1;
+			minZ1 = (z1 < minZ1) ? z1 : minZ1;
+			maxZ2 = (z2 > maxZ2) ? z2 : maxZ2;
+			minZ2 = (z2 < minZ2) ? z2 : minZ2;
+			double dist = polyLine.get(i).distance(polyLine.get(i-1));
+			maxAdjDist = (dist > maxAdjDist)? dist : maxAdjDist;
+		}
+//		minZ1 = (minY + minX);
+//		maxZ1 = (maxX + maxY);
+	//	
+//		minZ2 = (minX - maxY);
+//		maxZ2 = (maxX - minY);
+		
+
+	    
+	    
+		double extend = Math.max(maxX - minX, maxY - minY);
+
+
+	//
+//	    System.out.println("maxD: " + maxD);
+//	    System.out.println("N: " + n);
+
+		/*********COORDINATES CONSTRAINT*****************/
+	    
+		minX = minX - extendLimit*extend;
+	    maxX = maxX + extendLimit*extend;
+	    minY = minY - extendLimit*extend;
+	    maxY = maxY + extendLimit*extend;
+	    minZ1 = minZ1 - extendLimit*extend;
+	    maxZ1 = maxZ1 + extendLimit*extend;
+	    minZ2 = minZ2 - extendLimit*extend;
+	    maxZ2 =  maxZ2 + extendLimit*extend;
+	    
+
+		xExtend = maxX - minX;
+		yExtend = maxY - minY;
+		z1Extend = maxZ1 - minZ1 ;
+		z2Extend = maxZ2 - minZ2;
+		System.out.println(polyLine);
+		System.out.println("max X: " + maxX + ", min X: " + minX);
+	    System.out.println("max Y: " + maxY + ", min Y: " + minY);
+	    System.out.println("max Z1: " + maxZ1 + ", min Z1: " + minZ1);
+	    System.out.println("max Z2: " + maxZ2 + ", min Z2: " + minZ2);
+		
+		
+	}
+	
 	/*type 1: x+y. type 2 x+y/2.  default accurate*/
 	public OctlinearBoundingBox(ArrayList<Point2D> polyLine, double distMin, double extendLimit, int type) {
 		super();
