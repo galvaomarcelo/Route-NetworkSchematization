@@ -142,7 +142,7 @@ public class MainFrame extends JPanel{
 		
 
 		/*Coesfeld, Geo1, Telgte, institute of sociology, Greven */
-		String[] lacations = { "51.756351, 8.039380, Beckum",  "51.759886, 7.907797, Ahlen", "51.77414307, 7.17605781, Haltern Nord", "51.706887, 7.193698, Haltern Sud", "51.74346956249209, 7.185658400022311, Haltern Center", "51.767347, 7.897526, Ahlen2", "51.758348, 7.901508, Ahlen2.5", "51.790968, 7.911588, Out Ahlen", "51.739854, 7.877066, Ahlen3","51.756001, 7.885407, Ahlen3.1",  "51.770922, 8.039127, Beckum2", "51.7550790, 8.0427605, Beckum2.5", "51.746769, 8.045381, Beckum2.6", "51.753091, 8.040308, Beckum3", "51.770913, 7.460567, Luedingenhausen","51.969514, 7.670296, test3", "51.973454, 7.693132, test4", "51.945615, 7.169686, Coesfeld", "51.969748, 7.591509, GEO2", "51.968832, 7.595635, GEO1", "51.909491, 7.399813, testa", "51.900333, 7.484416, testb", "51.971783, 7.618972, testc", "51.969719, 7.622258, testd", "51.780154, 7.486016, texte", "51.786821, 7.541262, testf", "51.985403, 7.780783, Telgte", "51.950937, 7.609571, AaseeViertel" , "52.092090, 7.611286, Greven", "51.921248, 7.620748, Angela" , "51.968063, 7.624503, Home",  "51.954893, 7.630217, HauptBahnhof" };
+		String[] lacations = { "51.756351, 8.039380, Beckum",  "51.759886, 7.907797, Ahlen", "51.77414307, 7.17605781, Haltern Nord", "51.706887, 7.193698, Haltern Sud", "51.74346956249209, 7.185658400022311, Haltern Center", "51.767347, 7.897526, Ahlen2", "51.758348, 7.901508, Ahlen2.5", "51.790968, 7.911588, Out Ahlen", "51.739854, 7.877066, Ahlen3","51.756001, 7.885407, Ahlen3.1",  "51.770922, 8.039127, Beckum2", "51.7550790, 8.0427605, Beckum2.5", "51.746769, 8.045381, Beckum2.6", "51.753091, 8.040308, Beckum3", "51.770913, 7.460567, Luedingenhausen","51.969514, 7.670296, test3", "51.973454, 7.693132, test4", "51.945615, 7.169686, Coesfeld", "51.969748, 7.591509, GEO2", "51.968832, 7.595635, GEO1", "51.766295916, 7.96566661, testa", "51.7623111279, 7.9888497714, testb", "51.971783, 7.618972, testc", "51.969719, 7.622258, testd", "51.780154, 7.486016, texte", "51.786821, 7.541262, testf", "51.985403, 7.780783, Telgte", "51.950937, 7.609571, AaseeViertel" , "52.092090, 7.611286, Greven", "51.921248, 7.620748, Angela" , "51.968063, 7.624503, Home",  "51.954893, 7.630217, HauptBahnhof" };
 	  //String[] lacations = {"51.732573, 7.415138, exp5",  "51.741365, 7.246723, exp4", "51.871761, 7.492952, exp3","51.787335, 7.616613, exp1", "51.652766, 7.538049, exp2", "51.756351, 8.039380, Beckum",  "51.759886, 7.907797, Ahlen", "51.767347, 7.897526, Ahlen2", "51.739854, 7.877066, Ahlen3", "51.969514, 7.670296, test3", "51.973454, 7.693132, test4", "51.945615, 7.169686, Coesfeld", "51.968832, 7.595635, GEO1", "51.909491, 7.399813, test", "51.980797, 7.631839, test2", "51.999059, 7.569633, test3", "51.985403, 7.780783, Telgte", "51.950937, 7.609571, AaseeViertel" , "52.092090, 7.611286, Greven", "51.921248, 7.620748, Angela" , "51.968063, 7.624503, Home",  "51.954893, 7.630217, HauptBahnhof" };
 
 		
@@ -150,8 +150,9 @@ public class MainFrame extends JPanel{
 
 		
 		cbSource = new JComboBox<String>(lacations);
+		cbSource.setSelectedIndex(7);
 		cbDestination = new JComboBox<String>(lacations);
-		cbDestination.setSelectedIndex(1);
+		cbDestination.setSelectedIndex(8);
 		
 		
 		textFieldSource = new JFormattedTextField();
@@ -451,9 +452,9 @@ public class MainFrame extends JPanel{
 		
 		
 		JPanel networkActivatePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		String[] networklevel = {"Network1", "Network1+Stubs", "Network2", "Network2+Stubs", "StubsOnly" , "No Network"}; 
+		String[] networklevel = {"Network1", "Network1+Stubs", "Network2", "Network2+Stubs", "StubsOnly" , "No Network" , "Pre-defined" , "Pre-defined2"}; 
 		cbStreetNetwork = new JComboBox<String>(networklevel);
-		cbStreetNetwork.setSelectedIndex(1);
+		cbStreetNetwork.setSelectedIndex(6);
 		cbReduceStubs = new JCheckBox("Reduce Stubs", false);
 		cbSmoothNetwork = new JCheckBox("Smooth Geometries", true);	
 		
@@ -472,10 +473,18 @@ public class MainFrame extends JPanel{
 		cbCheckSelfTopologyNetwork = new JCheckBox("Check Self Topology", false);
 		cbCheckTopologyNetwork = new JCheckBox("Check Topology", false);
 	
+		cbCheckSelfTopology = new JCheckBox("Check Self Topology", true);
+		cbCheckTopology = new JCheckBox("Check Topology", true);
+		textFieldMinDistToRoute = new JFormattedTextField();
+		textFieldMinDistToRoute.setText("20");
+		JLabel textMinDistToRoute = new JLabel(" min dist.:");
+		
 		networkGeneralPanel.add(cbXIncorrectsNetwork);
 		networkGeneralPanel.add(cbXallNetwork);
 		networkGeneralPanel.add(cbCheckTopologyNetwork);
 		networkGeneralPanel.add(cbCheckSelfTopologyNetwork);
+		networkGeneralPanel.add(textMinDistToRoute);
+		networkGeneralPanel.add(textFieldMinDistToRoute);
 
 		
 		
@@ -534,7 +543,7 @@ public class MainFrame extends JPanel{
 
 		JPanel networkTransSimpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		JLabel textAreaNetworkTransSimpPanel = new JLabel("Simplification tolerance ");
-		sliderTranfsSimplificationNetwork = new JSlider(JSlider.HORIZONTAL, 1, 10, 10);
+		sliderTranfsSimplificationNetwork = new JSlider(JSlider.HORIZONTAL, 1, 10, 5);
 		sliderTranfsSimplificationNetwork.setBackground( new Color(1,true));
 		sliderTranfsSimplificationNetwork.setOpaque(false);
 		sliderTranfsSimplificationNetwork.setMajorTickSpacing(2);
@@ -584,16 +593,12 @@ public class MainFrame extends JPanel{
 		JPanel regionGeneralPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		
 		
-		cbCheckSelfTopology = new JCheckBox("Check Self Topology", true);
-		cbCheckTopology = new JCheckBox("Check Topology", true);
-		textFieldMinDistToRoute = new JFormattedTextField();
-		textFieldMinDistToRoute.setText("5");
-		JLabel textMinDistToRoute = new JLabel(" min dist.:");
+		
 		
 		regionGeneralPanel.add(cbCheckTopology);
 		regionGeneralPanel.add(cbCheckSelfTopology);
-		regionGeneralPanel.add(textMinDistToRoute);
-		regionGeneralPanel.add(textFieldMinDistToRoute);
+		
+		
 		
 		JPanel regionBendPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		JLabel textAreaRegionBend = new JLabel("Bend Factor:");

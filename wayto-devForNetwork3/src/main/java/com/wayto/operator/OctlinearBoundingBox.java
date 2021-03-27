@@ -404,6 +404,8 @@ public class OctlinearBoundingBox {
 		
 	}
 
+
+
 	/*I took pictures of the calculation 19-nov2018*/
 	public ArrayList<Point2D> getBoundingPolygon() {
 		Polygon p = null;

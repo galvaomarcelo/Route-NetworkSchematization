@@ -56,7 +56,7 @@ public class MainController {
 	private XMap xMap = null;
 	
 	private float featureEnhance = 0.65f;
-	final String exportFolder = "C:\\Users\\m_deli02\\Documents\\AfterErasmus\\Wayto\\JOURNALPAPER\\data\\";
+	final String exportFolder = "C:\\Users\\m_deli02\\Documents\\AfterErasmus\\Wayto\\JOURNALPAPERIII\\data\\";
 	
 	
 	private LayerTableModel layerTableModel;
@@ -264,7 +264,7 @@ public class MainController {
 							mainFrame.getSliderDistFactor().getValue(), /*dist*/
 							mainFrame.getSliderProportionDP().getValue(), /*proportion DP*/
 							mainFrame.getSliderProportionAllPts().getValue(), /*proportion DP*/
-							mainFrame.getSliderScaleVariation().getValue(), /*scale*/
+							dataController.getRouteRescaleLengthProportion(), /*scale*/
 							mainFrame.getCbDirectionModel().getSelectedIndex(), /*0:none , 1:bestdir, 2:trad, 3:klippel*/
 							adjVerticesMinDist,
 							minNonAdjEdgeDist,
@@ -347,7 +347,7 @@ public class MainController {
 //						} catch (Exception e1) {
 //							e1.printStackTrace();
 //						}
-						dataController.getPathList().get(i).setWasSchematized(true);
+						//dataController.getPathList().get(i).setWasSchematized(true);
 					}
 				}
 				
@@ -357,7 +357,7 @@ public class MainController {
 					for(int i = 1; i < dataController.getPathList().size(); i++){
 						//System.out.println("Schematizing path " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
 
-						if(!dataController.getPathList().get(i).isChunkPath() && !dataController.getPathList().get(i).isRouteAdjEdge() && !(dataController.getPathList().get(i).getIsPolygon()>0)){
+						if( !(dataController.getPathList().get(i).getIsPolygon()>0)){
 
 							pathsToSchematizeTogether.add(dataController.getPathList().get(i));
 						}		
@@ -369,8 +369,8 @@ public class MainController {
 								dataController.getStreetNetwork(), dataController.getNetworkEnvelop().maxExtent(),
 								mainFrame.getSliderProportionNetwork().getValue(),
 								mainFrame.getSliderEdgeOrientationNetwork().getValue(),
-								mainFrame.getCbCheckSelfTopology().isSelected(),
-								mainFrame.getCbCheckTopology().isSelected(),
+								mainFrame.getCbCheckSelfTopologyNetwork().isSelected(),
+								mainFrame.getCbCheckTopologyNetwork().isSelected(),
 								minDistToRoute,
 								adjVerticesMinDist,
 								dataController.getRouteRescaleLengthProportion(),
@@ -884,12 +884,12 @@ public class MainController {
 				String timestamp = date.format(formatter);
 				String fileName = "Route" + dataController.getRoute().getStartName() + dataController.getRoute().getEndName() + timestamp;
 				if(mainFrame.getCbToggleXOLayers().isSelected() == false ) {
-					geoJsonText = buildGeoJson(3, 1);
+					geoJsonText = buildGeoJson(1, 100, true);
 					//geoJsonText = builMultibleRescaledRouteGeoJson();
 					//fileName = fileName.concat("MultpleRescale");
 				}
 				else {	
-					geoJsonText = buildGeoJsonX(100);
+					geoJsonText = buildGeoJsonX(100,true);
 					fileName = fileName.concat("X");
 				}
 				
@@ -1102,8 +1102,9 @@ public class MainController {
 		 * 2 schematic
 		 * 3 geographic
 		 * 4 default(projection)***/
-		private String buildGeoJson(int coordinateType, double scale){
+		private String buildGeoJson(int coordinateType, double scale, boolean invertY){
 			
+			double maxY = dataController.getNetworkEnvelop().getMaxY()*scale;
 			
 			long start, end;
 			JSONObject featureCollection = new JSONObject();
@@ -1131,11 +1132,10 @@ public class MainController {
 		        /**PATHS***/
 		        
 				int pathIndex = 0;
-				for (Path path: dataController.getStreetOnlyPathList()){
+				for (Path path: dataController.getPathList()){
 					/*OnlyRoute Condition*/
-
 					
-					if(   !(path.getIsPolygon()>0)){
+					if(   !(path.getIsPolygon()>0) && !path.isRoute() ){
 						ArrayList<Path> pathClazzSubdivision = path.divideByClazzChange(dataController.getStreetNetwork());
 						for(Path subPath: pathClazzSubdivision) {
 							
@@ -1166,8 +1166,10 @@ public class MainController {
 							for(Point2D pt: pointList){
 								JSONArray point = new JSONArray();
 								point.put(scale*pt.getX());
-								point.put(scale*pt.getY());
-
+								if(!invertY)
+									point.put(scale*pt.getY());
+								else 
+									point.put(maxY - scale*pt.getY());
 								lineString.put(point);
 							}
 
@@ -1205,22 +1207,39 @@ public class MainController {
 
 				}
 		        
-		        /**ROUTE ADJ EDGES***/
-					for (Path path: dataController.getRouteAdjPathList()){
-						if(path.getIsPolygon() == 0) {
+		        /**NETWORK EDGES***/		       
+				for(StreetEdge edge: dataController.getStreetNetwork().getEdges().values()){
+					
+					if(
+							((edge.getSourcePoint().isRouteNode() && !edge.getTargetPoint().isRouteNode()) ||
+									(!edge.getSourcePoint().isRouteNode() && edge.getTargetPoint().isRouteNode()) )) 
+					{
+
+
+							
+							
 							
 							JSONObject feature = new JSONObject();
 							feature.put("type", "Feature");
 							JSONArray lineString = new JSONArray();
-
-							for(Point2D pt: path.asJava2DList(coordinateType)){
-								JSONArray point = new JSONArray();
-								point.put(scale*pt.getX());
-								point.put(scale*pt.getY());
-
-								lineString.put(point);
-							}
-
+							JSONArray point = new JSONArray();						
+							point.put(scale*edge.getSourcePoint().getGeomByType(coordinateType).getX());	
+							if(!invertY)
+								point.put(scale*edge.getSourcePoint().getGeomByType(coordinateType).getY());
+							else
+								point.put(maxY - scale*edge.getSourcePoint().getGeomByType(coordinateType).getY());
+							
+							
+							JSONArray point2 = new JSONArray();						
+							point2.put(scale*edge.getTargetPoint().getGeomByType(coordinateType).getX());	
+							if(!invertY)
+								point2.put(scale*edge.getTargetPoint().getGeomByType(coordinateType).getY());
+							else
+								point2.put(maxY - scale*edge.getTargetPoint().getGeomByType(coordinateType).getY());
+							
+							lineString.put(point);
+							lineString.put(point2);
+							
 
 							JSONObject geometry = new JSONObject();
 							geometry.put("type", "LineString");
@@ -1231,14 +1250,18 @@ public class MainController {
 							JSONObject properties = new JSONObject();
 							properties.put("type", "stub-path");
 							properties.put("name", "stub-path");
-							properties.put("clazz", path.getClazz());
+							properties.put("clazz", edge.getClazz());
 							//properties.put("color", arearef.getColor());
 							feature.put("properties", properties );		
 							featureList.put(feature);
+								
+								
+							
+								
 						}
 						
-						
-					}
+													
+				}
 				
 		        /**ROUTE ***/
 		        LineString smotthedLine = (LineString) DouglasPeuckerSimplifier.simplify(Smoother.geometrySmoothCut(dataController.getRoute().getRoutePath().asLineString(coordinateType), dataController.getRoute().getDPAnd2DegreeIndex(), 0.15, 8) , 0.00005);
@@ -1251,7 +1274,10 @@ public class MainController {
             	for(Point2D pt: smothLinePointList){
             		JSONArray point = new JSONArray();
             		point.put(scale*pt.getX());
-                	point.put(scale*pt.getY());
+            		if(!invertY)
+						point.put(scale*pt.getY());
+					else
+						point.put(maxY - scale*pt.getY());
             		
                 	lineString.put(point);
             	}
@@ -1267,7 +1293,7 @@ public class MainController {
             	properties.put("type", "route");
             	properties.put("name", "route");
             	properties.put("projectedScale", 1/dataController.getMaxRouteProjectedEnvExtention());
-            	properties.put("pointLMDist", meanCELenght);
+            	//properties.put("pointLMDist", meanCELenght);
 	        	//properties.put("color", arearef.getColor());
 	        	feature.put("properties", properties );		
 	        	featureList.put(feature);
@@ -1284,7 +1310,10 @@ public class MainController {
 		            	JSONArray point = new JSONArray();/*coordinate point1*/
 						
 		            	point.put(scale*n.getGeomByType(coordinateType).getX());
-		            	point.put(scale*n.getGeomByType(coordinateType).getY());
+		            	if(!invertY)
+		            		point.put(scale*n.getGeomByType(coordinateType).getY());
+		            	else
+		            		point.put(maxY - scale*n.getGeomByType(coordinateType).getY());
 		            	
 		            	geometry = new JSONObject();
 		            	geometry.put("type", "Point");
@@ -1404,7 +1433,10 @@ public class MainController {
 		            	for(Point2D pt: p.asJava2DList(coordinateType)){
 		            		JSONArray point = new JSONArray();
 		            		point.put(scale*pt.getX());
-		                	point.put(scale*pt.getY());
+		            		if(!invertY)
+		            			point.put(scale*pt.getY());
+		            		else
+		            			point.put(maxY - scale*pt.getY());
 		            		
 		                	linearRing.put(point);
 		            	}
@@ -1451,8 +1483,12 @@ public class MainController {
             	JSONArray startPoint = new JSONArray();/*coordinate point1*/
 				
             	startPoint.put(scale*dataController.getRoute().getStart().getGeomByType(coordinateType).getX());
-            	startPoint.put(scale*dataController.getRoute().getStart().getGeomByType(coordinateType).getY());
-            	
+            	if(!invertY)
+            		startPoint.put(scale*dataController.getRoute().getStart().getGeomByType(coordinateType).getY());
+            	else
+            		startPoint.put(maxY - scale*dataController.getRoute().getStart().getGeomByType(coordinateType).getY());
+
+            		
             	geometry = new JSONObject();
             	geometry.put("type", "Point");
             	geometry.put("coordinates", startPoint);
@@ -1476,8 +1512,11 @@ public class MainController {
             	JSONArray endPoint = new JSONArray();/*coordinate point1*/
 				
             	endPoint.put(scale*dataController.getRoute().getEnd().getGeomByType(coordinateType).getX());
-            	endPoint.put(scale*dataController.getRoute().getEnd().getGeomByType(coordinateType).getY());
-            	
+            	if(!invertY)
+                  endPoint.put(scale*dataController.getRoute().getEnd().getGeomByType(coordinateType).getY());
+            	else
+                   endPoint.put(maxY - scale*dataController.getRoute().getEnd().getGeomByType(coordinateType).getY());
+
             	geometry = new JSONObject();
             	geometry.put("type", "Point");
             	geometry.put("coordinates", endPoint);
@@ -1507,7 +1546,11 @@ public class MainController {
 			            	JSONArray point = new JSONArray();/*coordinate point1*/
 							
 							point.put(scale*n.getGeomByType(coordinateType).getX());
-			            	point.put(scale*n.getGeomByType(coordinateType).getY());
+							if(!invertY)
+								point.put(scale*n.getGeomByType(coordinateType).getY());
+							else
+								point.put(maxY - scale*n.getGeomByType(coordinateType).getY());
+
 			            	
 			            	geometry = new JSONObject();
 			            	geometry.put("type", "Point");
@@ -1534,7 +1577,10 @@ public class MainController {
 			            	JSONArray point = new JSONArray();/*coordinate point1*/
 							
 							point.put(scale*n.getGeomByType(coordinateType).getX());
-			            	point.put(scale*n.getGeomByType(coordinateType).getY());
+							if(!invertY)
+								point.put(scale*n.getGeomByType(coordinateType).getY());
+							else
+								point.put(maxY - scale*n.getGeomByType(coordinateType).getY());
 			            	
 			            	geometry = new JSONObject();
 			            	geometry.put("type", "Point");
@@ -1560,7 +1606,10 @@ public class MainController {
 			            	JSONArray point = new JSONArray();/*coordinate point1*/
 							
 			            	point.put(scale*n.getGeomByType(coordinateType).getX());
-			            	point.put(scale*n.getGeomByType(coordinateType).getY());
+			            	if(!invertY)
+								point.put(scale*n.getGeomByType(coordinateType).getY());
+							else
+								point.put(maxY - scale*n.getGeomByType(coordinateType).getY());
 			            	
 			            	geometry = new JSONObject();
 			            	geometry.put("type", "Point");
@@ -1578,7 +1627,37 @@ public class MainController {
 				        	featureList.put(feature);
 						}
 						
+						if(n.isRelevantRouteNode()) {
+							
+							feature = new JSONObject();
+			            	feature.put("type", "Feature");
+			            	
+			            	JSONArray point = new JSONArray();/*coordinate point1*/
+							
+							point.put(scale*n.getGeomByType(coordinateType).getX());
+							if(!invertY)
+								point.put(scale*n.getGeomByType(coordinateType).getY());
+							else
+								point.put(maxY - scale*n.getGeomByType(coordinateType).getY());
 
+			            	
+			            	geometry = new JSONObject();
+			            	geometry.put("type", "Point");
+			            	geometry.put("coordinates", point);
+			            	feature.put("geometry", geometry);
+			            	
+			            	properties = new JSONObject();
+				        	properties.put("type", "relevant-node");
+				        	properties.put("name", "relevant-node");
+				        	properties.put("lat", n.getCoordinate().getY());
+				        	properties.put("lon", n.getCoordinate().getX());
+				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+				        	
+				        	feature.put("properties", properties );		
+				        	featureList.put(feature);
+						
+						
+						}
 					
 
 
@@ -1593,7 +1672,10 @@ public class MainController {
 	            	JSONArray point = new JSONArray();/*coordinate point1*/
 					
 					point.put(scale*p.getNode().getGeomByType(coordinateType).getX());
-	            	point.put(scale*p.getNode().getGeomByType(coordinateType).getY());
+					if(!invertY)
+						point.put(scale*p.getNode().getGeomByType(coordinateType).getY());
+					else
+						point.put(maxY - scale*p.getNode().getGeomByType(coordinateType).getY());
 	            	
 	            	geometry = new JSONObject();
 	            	geometry.put("type", "Point");
@@ -1634,9 +1716,9 @@ public class MainController {
 		}
 
 		
-		private String buildGeoJsonX(double scale){
+		private String buildGeoJsonX(double scale, boolean invertY){
 			
-			
+			double maxY = dataController.getNetworkEnvelop().getMaxY()*scale;
 			long start, end;
 			JSONObject featureCollection = new JSONObject();
 			
@@ -1703,8 +1785,10 @@ public class MainController {
 							for(Point2D pt: pointList){
 								JSONArray point = new JSONArray();
 								point.put(scale*pt.getX());
-								point.put(scale*pt.getY());
-
+								if(!invertY)
+									point.put(scale*pt.getY());
+								else
+									point.put(maxY - scale*pt.getY());
 								lineString.put(point);
 							}
 
@@ -1743,21 +1827,35 @@ public class MainController {
 				}
 				
 		        /**ROUTE ADJ EDGES***/
-					for (Path path: dataController.getRouteAdjPathList()){
-						if(path.getIsPolygon() == 0) {
+				for(StreetEdge edge: dataController.getStreetNetwork().getEdges().values()){
+					
+					if(
+							((edge.getSourcePoint().isRouteNode() && !edge.getTargetPoint().isRouteNode()) ||
+									(!edge.getSourcePoint().isRouteNode() && edge.getTargetPoint().isRouteNode()) )) 
+					{
+						if(edge.getSourcePoint().getxGeom()!= null && edge.getTargetPoint().getxGeom()!= null){
 							
 							JSONObject feature = new JSONObject();
 							feature.put("type", "Feature");
 							JSONArray lineString = new JSONArray();
-
-							for(Point2D pt: path.asJava2DList(2)){
-								JSONArray point = new JSONArray();
-								point.put(scale*pt.getX());
-								point.put(scale*pt.getY());
-
-								lineString.put(point);
-							}
-
+							JSONArray point = new JSONArray();						
+							point.put(scale*edge.getSourcePoint().getxGeom().getX());	
+							if(!invertY)
+								point.put(scale*edge.getSourcePoint().getxGeom().getY());
+							else
+								point.put(maxY - scale*edge.getSourcePoint().getxGeom().getY());
+							
+							
+							JSONArray point2 = new JSONArray();						
+							point2.put(scale*edge.getTargetPoint().getxGeom().getX());	
+							if(!invertY)
+								point2.put(scale*edge.getTargetPoint().getxGeom().getY());
+							else
+								point2.put(maxY - scale*edge.getTargetPoint().getxGeom().getY());
+							
+							lineString.put(point);
+							lineString.put(point2);
+							
 
 							JSONObject geometry = new JSONObject();
 							geometry.put("type", "LineString");
@@ -1768,14 +1866,21 @@ public class MainController {
 							JSONObject properties = new JSONObject();
 							properties.put("type", "stub-path");
 							properties.put("name", "stub-path");
-							properties.put("clazz", path.getClazz());
+							properties.put("clazz", edge.getClazz());
 							//properties.put("color", arearef.getColor());
 							feature.put("properties", properties );		
 							featureList.put(feature);
+								
+								
+							
+								
 						}
 						
-						
 					}
+						
+				}
+								
+		
 				
 				
 				 JSONObject feature;
@@ -1866,7 +1971,10 @@ public class MainController {
             	for(Point2D pt: smothLinePointList){
             		JSONArray point = new JSONArray();
             		point.put(scale*pt.getX());
-                	point.put(scale*pt.getY());
+            		if(!invertY)
+						point.put(scale*pt.getY());
+					else
+						point.put(maxY - scale*pt.getY());
             		
                 	lineString.put(point);
             	}
@@ -1882,7 +1990,7 @@ public class MainController {
             	properties.put("type", "route");
             	properties.put("name", "route");
             	properties.put("projectedScale", 1/(dataController.getMaxRouteProjectedEnvExtention()));
-            	properties.put("pointLMDist", meanCELenght);
+            	//properties.put("pointLMDist", meanCELenght);
 	        	//properties.put("color", arearef.getColor());
 	        	
 	        	
@@ -1903,13 +2011,25 @@ public class MainController {
 		            	JSONArray point = new JSONArray();/*coordinate point1*/
 						
 		            	point.put(scale*n.getxGeom().getX());
-		            	point.put(scale*n.getxGeom().getY());
+		            	if(!invertY)
+		            		point.put(scale*n.getxGeom().getY());
+						else
+							point.put(maxY - scale*n.getxGeom().getY());
+		            	
 		            	
 		            	geometry = new JSONObject();
 		            	geometry.put("type", "Point");
 		            	geometry.put("coordinates", point);
 		            	feature.put("geometry", geometry);
-		            	
+//		            	if(n.isDecisionPoint()) {
+//		            		properties = new JSONObject();
+//				        	properties.put("type", "route-node");
+//				        	properties.put("name", "route-node");
+//				        	properties.put("order", indexOfnode);
+//				        	properties.put("lat", n.getCoordinate().getY());
+//				        	properties.put("lon", n.getCoordinate().getX());
+//				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+//		            	}
 		            	properties = new JSONObject();
 			        	properties.put("type", "route-node");
 			        	properties.put("name", "route-node");
@@ -1923,66 +2043,274 @@ public class MainController {
 			        	
 			        	indexOfnode++;
 				}
+	        	
+			/**ROUTE START***/
+				
+				feature = new JSONObject();
+            	feature.put("type", "Feature");
+            	
+            	JSONArray startPoint = new JSONArray();/*coordinate point1*/
+				
+            	startPoint.put(scale*dataController.getRoute().getStart().getxGeom().getX());
+            	if(!invertY)
+                	startPoint.put(scale*dataController.getRoute().getStart().getxGeom().getY());
+				else
+	            	startPoint.put(maxY - scale*dataController.getRoute().getStart().getxGeom().getY());
+            	
+            	geometry = new JSONObject();
+            	geometry.put("type", "Point");
+            	geometry.put("coordinates", startPoint);
+            	feature.put("geometry", geometry);
+            	
+            	properties = new JSONObject();
+	        	properties.put("type", "route-start");
+	        	properties.put("name", "route-start");
+	        	properties.put("lat", dataController.getRoute().getStart().getCoordinate().getX());
+	        	properties.put("lon", dataController.getRoute().getStart().getCoordinate().getY());
+	        	properties.put("edges", String.format("%8s", Integer.toBinaryString((dataController.getRoute().getStart().getEdges() + 256) % 256)).replace(' ', '0') );
+	        	
+	        	feature.put("properties", properties );		
+	        	featureList.put(feature);
+	        	
+	        	
+				feature = new JSONObject();
+            	feature.put("type", "Feature");
+            	
+            	/**ROUTE END***/
+            	JSONArray endPoint = new JSONArray();/*coordinate point1*/
+				         	
+            	
+            	endPoint.put(scale*dataController.getRoute().getEnd().getxGeom().getX());
+            	if(!invertY)
+            		endPoint.put(scale*dataController.getRoute().getEnd().getxGeom().getY());
+				else
+					endPoint.put(maxY - scale*dataController.getRoute().getEnd().getxGeom().getY());        	
+            	            	            	
+            	geometry = new JSONObject();
+            	geometry.put("type", "Point");
+            	geometry.put("coordinates", endPoint);
+            	feature.put("geometry", geometry);
+            	
+            	properties = new JSONObject();
+	        	properties.put("type", "route-end");
+	        	properties.put("name", "route-end");
+	        	properties.put("lat", dataController.getRoute().getEnd().getCoordinate().getX());
+	        	properties.put("lon", dataController.getRoute().getEnd().getCoordinate().getY());
+	        	properties.put("edges", String.format("%8s", Integer.toBinaryString((dataController.getRoute().getEnd().getEdges() + 256) % 256)).replace(' ', '0') );
+	        	
+	        	feature.put("properties", properties );		
+	        	featureList.put(feature);
+				
+				/**NODE FEATURES***/
+				
+				for(StreetNode n: dataController.getStreetNodeMap().values()){
+					
+					
+					if(n.getxGeom()!= null) {
+						
+						
+						
+						
+						if(n.isDecisionPoint()) {
+							
+							
+							feature = new JSONObject();
+			            	feature.put("type", "Feature");
+			            	
+			            	JSONArray point = new JSONArray();/*coordinate point1*/
+							
+							point.put(scale*n.getxGeom().getX());
+							if(!invertY)
+								point.put(scale*n.getxGeom().getY());
+							else
+								point.put(maxY - scale*n.getxGeom().getY());
+			            	
+			            	
+			            	geometry = new JSONObject();
+			            	geometry.put("type", "Point");
+			            	geometry.put("coordinates", point);
+			            	feature.put("geometry", geometry);
+			            	
+							
+			            	properties = new JSONObject();
+				        	properties.put("type", "decision-point");
+				        	properties.put("name", "decision-point");
+				        	properties.put("lat", n.getCoordinate().getY());
+				        	properties.put("lon", n.getCoordinate().getX());
+				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+				        	
+				        	feature.put("properties", properties );		
+				        	featureList.put(feature);
+				        	
+				        	
+						
+						
+						}
+		
+						if(n.isRoundAbout()  && n.isRouteNode()){
+							
+			            	
+							feature = new JSONObject();
+			            	feature.put("type", "Feature");
+			            	
+			            	JSONArray point = new JSONArray();/*coordinate point1*/
+							
+							point.put(scale*n.getxGeom().getX());
+							if(!invertY)
+								point.put(scale*n.getxGeom().getY());
+							else
+								point.put(maxY - scale*n.getxGeom().getY());
+			            	
+			            	
+			            	geometry = new JSONObject();
+			            	geometry.put("type", "Point");
+			            	geometry.put("coordinates", point);
+			            	feature.put("geometry", geometry);
+			            	
+							
+			            	properties = new JSONObject();
+				        	properties.put("type", "round-about");
+				        	properties.put("name", "round-about");
+				        	properties.put("lat", n.getCoordinate().getY());
+				        	properties.put("lon", n.getCoordinate().getX());
+				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+				        	
+				        	feature.put("properties", properties );		
+				        	featureList.put(feature);
+						}
+						
+						
+						if(n.getTopoRelations().size() > 0){
+							
+			            	
+							feature = new JSONObject();
+			            	feature.put("type", "Feature");
+			            	
+			            	JSONArray point = new JSONArray();/*coordinate point1*/
+							
+							point.put(scale*n.getxGeom().getX());
+							if(!invertY)
+								point.put(scale*n.getxGeom().getY());
+							else
+								point.put(maxY - scale*n.getxGeom().getY());
+			            	
+			            	
+			            	geometry = new JSONObject();
+			            	geometry.put("type", "Point");
+			            	geometry.put("coordinates", point);
+			            	feature.put("geometry", geometry);
+			            	
+							
+			            	properties = new JSONObject();
+				        	properties.put("type", "topo-point");
+				        	properties.put("name", "topo-point");
+				        	properties.put("lat", n.getCoordinate().getY());
+				        	properties.put("lon", n.getCoordinate().getX());
+				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+				        	
+				        	feature.put("properties", properties );		
+				        	featureList.put(feature);
+						}
+						if(n.isRelevantRouteNode()){
+							
+			            	
+							feature = new JSONObject();
+			            	feature.put("type", "Feature");
+			            	
+			            	JSONArray point = new JSONArray();/*coordinate point1*/
+							
+							point.put(scale*n.getxGeom().getX());
+							if(!invertY)
+								point.put(scale*n.getxGeom().getY());
+							else
+								point.put(maxY - scale*n.getxGeom().getY());
+			            	
+			            	
+			            	geometry = new JSONObject();
+			            	geometry.put("type", "Point");
+			            	geometry.put("coordinates", point);
+			            	feature.put("geometry", geometry);
+			            	
+							
+			            	properties = new JSONObject();
+				        	properties.put("type", "relevant-node");
+				        	properties.put("name", "relevant-node");
+				        	properties.put("lat", n.getCoordinate().getY());
+				        	properties.put("lon", n.getCoordinate().getX());
+				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
+				        	
+				        	feature.put("properties", properties );		
+				        	featureList.put(feature);
+						}
+						
+
+						
+						
+						
+					}
+
+
+				}
 		        
 		        
 		        /**STREET NETWORK***/
-	        	for(StreetEdge edge: dataController.getStreetNetwork().getEdges().values()){
-	        		if(!edge.getSourcePoint().isDisconnected() && !edge.getTargetPoint().isDisconnected()) {
-	        			/*exist schamatic geometry?*/
-	        			if(edge.getSourcePoint().getxGeom()!= null && edge.getTargetPoint().getxGeom()!= null){
-
-	        				/*if it is adjedge*/
-	        				//						if(!edge.isFakeEdge() && 
-	        				//								((edge.getSourcePoint().isRouteNode() && !edge.getTargetPoint().isRouteNode()) ||
-	        				//								(!edge.getSourcePoint().isRouteNode() && edge.getTargetPoint().isRouteNode()) ))
-	        				//							adjEdgesLayerX.getLines().add( edge.asPointList(2));
-
-	        				/*if it is strictly street edge? if its not polygon edge?*/
-//	        				if(!edge.isFakeEdge() && !(edge.getIsPolygonEdge()>0) ) {
-//	        					if(edge.getSpecial() == 5)
-//	        						System.out.println("this is brighe edge");
-//	        					featureList.put(edge.toGeoJSONFeature(2));
+//	        	for(StreetEdge edge: dataController.getStreetNetwork().getEdges().values()){
+//	        		if(!edge.getSourcePoint().isDisconnected() && !edge.getTargetPoint().isDisconnected()) {
+//	        			/*exist schamatic geometry?*/
+//	        			if(edge.getSourcePoint().getxGeom()!= null && edge.getTargetPoint().getxGeom()!= null){
+//
+//	        				/*if it is adjedge*/
+//	        				//						if(!edge.isFakeEdge() && 
+//	        				//								((edge.getSourcePoint().isRouteNode() && !edge.getTargetPoint().isRouteNode()) ||
+//	        				//								(!edge.getSourcePoint().isRouteNode() && edge.getTargetPoint().isRouteNode()) ))
+//	        				//							adjEdgesLayerX.getLines().add( edge.asPointList(2));
+//
+//	        				/*if it is strictly street edge? if its not polygon edge?*/
+////	        				if(!edge.isFakeEdge() && !(edge.getIsPolygonEdge()>0) ) {
+////	        					if(edge.getSpecial() == 5)
+////	        						System.out.println("this is brighe edge");
+////	        					featureList.put(edge.toGeoJSONFeature(2));
+////
+////
+////
+////	        				}
+//	        				if(edge.isFakeEdge() )  {
+//								
+//								feature = new JSONObject();
+//								feature.put("type", "Feature");
+//								lineString = new JSONArray();
+//
+//								JSONArray point1 = new JSONArray();
+//								JSONArray point2 = new JSONArray();
+//								
+//								lineString = new JSONArray();
+//								point1.put(edge.getSourcePoint().getxGeom().getX());
+//								point1.put(edge.getSourcePoint().getxGeom().getY());
+//								point2.put(edge.getTargetPoint().getxGeom().getX());
+//								point2.put(edge.getTargetPoint().getxGeom().getY());
+//								lineString.put(point1);
+//								lineString.put(point2);
+//	
+//								geometry = new JSONObject();
+//								geometry.put("type", "LineString");
+//								geometry.put("coordinates", lineString);
+//
+//								properties = new JSONObject();
+//								properties.put("type", "control-edge");
+//								properties.put("name", "control-edge");
+//								
+//								feature.put("geometry", geometry);
+//								feature.put("properties", properties );		
+//								featureList.put(feature);
 //
 //
 //
 //	        				}
-	        				if(edge.isFakeEdge() )  {
-								
-								feature = new JSONObject();
-								feature.put("type", "Feature");
-								lineString = new JSONArray();
-
-								JSONArray point1 = new JSONArray();
-								JSONArray point2 = new JSONArray();
-								
-								lineString = new JSONArray();
-								point1.put(edge.getSourcePoint().getxGeom().getX());
-								point1.put(edge.getSourcePoint().getxGeom().getY());
-								point2.put(edge.getTargetPoint().getxGeom().getX());
-								point2.put(edge.getTargetPoint().getxGeom().getY());
-								lineString.put(point1);
-								lineString.put(point2);
-	
-								geometry = new JSONObject();
-								geometry.put("type", "LineString");
-								geometry.put("coordinates", lineString);
-
-								properties = new JSONObject();
-								properties.put("type", "control-edge");
-								properties.put("name", "control-edge");
-								
-								feature.put("geometry", geometry);
-								feature.put("properties", properties );		
-								featureList.put(feature);
-
-
-
-	        				}
-
-	        			}
-	        		}
-
-	        	}
+//
+//	        			}
+//	        		}
+//
+//	        	}
 		        
 		        /**POLYGONAL FEATURES**/
 				/****Polygonal Features ******/
@@ -2022,7 +2350,10 @@ public class MainController {
 		            		JSONArray point = new JSONArray();
 		            		if(!Double.isNaN(pt.getX()) &&  !Double.isNaN(pt.getX()) ) {
 		            			point.put(scale*pt.getX());
-			                	point.put(scale*pt.getY());
+		            			if(!invertY)
+									point.put(scale*pt.getY());
+								else
+									point.put(maxY - scale*pt.getY());
 		            		}
 		            		else
 		            			System.out.println("Something strange in polygon smoothed: " +  pt);
@@ -2064,151 +2395,7 @@ public class MainController {
 
 				}
 				
-				/**ROUTE START***/
-				
-				feature = new JSONObject();
-            	feature.put("type", "Feature");
-            	
-            	JSONArray startPoint = new JSONArray();/*coordinate point1*/
-				
-            	startPoint.put(scale*dataController.getRoute().getStart().getxGeom().getX());
-            	startPoint.put(scale*dataController.getRoute().getStart().getxGeom().getY());
-            	
-            	geometry = new JSONObject();
-            	geometry.put("type", "Point");
-            	geometry.put("coordinates", startPoint);
-            	feature.put("geometry", geometry);
-            	
-            	properties = new JSONObject();
-	        	properties.put("type", "route-start");
-	        	properties.put("name", "route-start");
-	        	properties.put("lat", dataController.getRoute().getStart().getCoordinate().getX());
-	        	properties.put("lon", dataController.getRoute().getStart().getCoordinate().getY());
-	        	properties.put("edges", String.format("%8s", Integer.toBinaryString((dataController.getRoute().getStart().getEdges() + 256) % 256)).replace(' ', '0') );
-	        	
-	        	feature.put("properties", properties );		
-	        	featureList.put(feature);
-	        	
-	        	
-				feature = new JSONObject();
-            	feature.put("type", "Feature");
-            	
-            	/**ROUTE END***/
-            	JSONArray endPoint = new JSONArray();/*coordinate point1*/
-				
-            	endPoint.put(scale*dataController.getRoute().getEnd().getxGeom().getX());
-            	endPoint.put(scale*dataController.getRoute().getEnd().getxGeom().getY());
-            	
-            	geometry = new JSONObject();
-            	geometry.put("type", "Point");
-            	geometry.put("coordinates", endPoint);
-            	feature.put("geometry", geometry);
-            	
-            	properties = new JSONObject();
-	        	properties.put("type", "route-end");
-	        	properties.put("name", "route-end");
-	        	properties.put("lat", dataController.getRoute().getEnd().getCoordinate().getX());
-	        	properties.put("lon", dataController.getRoute().getEnd().getCoordinate().getY());
-	        	properties.put("edges", String.format("%8s", Integer.toBinaryString((dataController.getRoute().getEnd().getEdges() + 256) % 256)).replace(' ', '0') );
-	        	
-	        	feature.put("properties", properties );		
-	        	featureList.put(feature);
-				
-				/**NODE FEATURES***/
-				
-				for(StreetNode n: dataController.getStreetNodeMap().values()){
-					
-					
-					if(n.getxGeom()!= null) {
-						
-						
-						if(n.isDecisionPoint()) {
-							
-							feature = new JSONObject();
-			            	feature.put("type", "Feature");
-			            	
-			            	JSONArray point = new JSONArray();/*coordinate point1*/
-							
-							point.put(scale*n.getxGeom().getX());
-			            	point.put(scale*n.getxGeom().getY());
-			            	
-			            	geometry = new JSONObject();
-			            	geometry.put("type", "Point");
-			            	geometry.put("coordinates", point);
-			            	feature.put("geometry", geometry);
-			            	
-			            	properties = new JSONObject();
-				        	properties.put("type", "decision-point");
-				        	properties.put("name", "decision-point");
-				        	properties.put("lat", n.getCoordinate().getY());
-				        	properties.put("lon", n.getCoordinate().getX());
-				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
-				        	
-				        	feature.put("properties", properties );		
-				        	featureList.put(feature);
-						
-						
-						}
-		
-						if(n.isRoundAbout()  && n.isRouteNode()){
-							feature = new JSONObject();
-			            	feature.put("type", "Feature");
-			            	
-			            	JSONArray point = new JSONArray();/*coordinate point1*/
-							
-							point.put(scale*n.getxGeom().getX());
-			            	point.put(scale*n.getxGeom().getY());
-			            	
-			            	geometry = new JSONObject();
-			            	geometry.put("type", "Point");
-			            	geometry.put("coordinates", point);
-			            	feature.put("geometry", geometry);
-			            	
-			            	properties = new JSONObject();
-				        	properties.put("type", "round-about");
-				        	properties.put("name", "round-about");
-				        	properties.put("lat", n.getCoordinate().getY());
-				        	properties.put("lon", n.getCoordinate().getX());
-				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
-				        	
-				        	feature.put("properties", properties );		
-				        	featureList.put(feature);
-						}
-						
-						
-						if(n.getTopoRelations().size() > 0){
-							feature = new JSONObject();
-			            	feature.put("type", "Feature");
-			            	
-			            	JSONArray point = new JSONArray();/*coordinate point1*/
-							
-							point.put(scale*n.getxGeom().getX());
-			            	point.put(scale*n.getxGeom().getY());
-			            	
-			            	geometry = new JSONObject();
-			            	geometry.put("type", "Point");
-			            	geometry.put("coordinates", point);
-			            	feature.put("geometry", geometry);
-			            	
-			            	properties = new JSONObject();
-				        	properties.put("type", "topo-point");
-				        	properties.put("name", "topo-point");
-				        	properties.put("lat", n.getCoordinate().getY());
-				        	properties.put("lon", n.getCoordinate().getX());
-				        	properties.put("edges", String.format("%8s", Integer.toBinaryString((n.getEdges() + 256) % 256)).replace(' ', '0') );
-				        	
-				        	feature.put("properties", properties );		
-				        	featureList.put(feature);
-						}
-						
-
-						
-						
-						
-					}
-
-
-				}
+	
 		        
 				/**POINT LIKE LANDMARKS**/
 				for(PointTopo p:dataController.getPointTopoList()) {
@@ -2218,7 +2405,11 @@ public class MainController {
 	            	JSONArray point = new JSONArray();/*coordinate point1*/
 					
 					point.put(scale*p.getNode().getxGeom().getX());
-	            	point.put(scale*p.getNode().getxGeom().getY());
+					if(!invertY)
+						point.put(scale*p.getNode().getxGeom().getY());
+					else
+						point.put(maxY - scale*p.getNode().getxGeom().getY());
+	            	
 	            	
 	            	geometry = new JSONObject();
 	            	geometry.put("type", "Point");
@@ -3337,14 +3528,14 @@ public class MainController {
 
 				}
 				
-				if( !path.isRoute() && !path.isRouteAdjEdge()){
+				if(!path.isRoute() && !path.isRouteAdjEdge()){
 				
 					PolyLineLayer networkLayer = new PolyLineLayer("Path" + pathIndex);
 					
 					if(path.getIsPolygon() > 0)
 						networkLayer.setName("PolyPath" + pathIndex);
 					else if(path.isChunkPath())
-						networkLayer.setColor(Color.RED);
+						networkLayer.setColor(Color.GRAY);
 					else {
 						networkLayer.setType(Layer.ORIGINAL_MAIN);
 						networkLayer.setColor(Color.GRAY);
@@ -3393,6 +3584,34 @@ public class MainController {
 
 			}
 			
+			for (Path path: dataController.getCoEgedPathList()){
+				/*OnlyRoute Condition*/
+			
+					PolyLineLayer networkLayer = new PolyLineLayer("CoPath" + pathIndex);
+					
+				
+						networkLayer.setType(Layer.ORIGINAL_MAIN);
+						networkLayer.setColor(Color.GRAY);
+						
+					
+					networkLayer.setStroke(featureEnhance*4);
+					networkLayer.setLayerDepth(10);
+	
+						networkLayer.setVisible(true);
+					networkLayer.getLines().add(path.asJava2DList(1));
+
+					xMap.getMapContent().getLayers().add(
+							networkLayer
+							);
+					pathIndex++;
+			
+			}
+
+				
+				
+				
+
+
 			
 		}
 		
@@ -3752,7 +3971,7 @@ private void addOriginalXRouteLayers() {
 			
 			/**Add smoothed network paths*/
 			int pathIndex = 0;
-			for (Path path: dataController.getStreetOnlyPathList()){
+			for (Path path: dataController.getPathList()){
 				/*OnlyRoute Condition*/
 //				if(path.isRoute()){
 ////					routePath = path;
@@ -3772,11 +3991,11 @@ private void addOriginalXRouteLayers() {
 					for(Path subPath: pathClazzSubdivision) {
 						PolyLineLayer networkLayer = new PolyLineLayer("XPath" + pathIndex);
 						
-						if( subPath.getClazz() == 11 || subPath.getClazz() == 13  )
-							networkLayer.setStroke(featureEnhance*8);
-						else if( subPath.getClazz() == 15 || subPath.getClazz() == 21  )
-							networkLayer.setStroke(featureEnhance*6);
-						else
+//						if( subPath.getClazz() == 11 || subPath.getClazz() == 13  )
+//							networkLayer.setStroke(featureEnhance*8);
+//						else if( subPath.getClazz() == 15 || subPath.getClazz() == 21  )
+//							networkLayer.setStroke(featureEnhance*6);
+//						else
 							networkLayer.setStroke(featureEnhance*3);
 						
 						
@@ -3815,6 +4034,29 @@ private void addOriginalXRouteLayers() {
 				pathIndex++;
 				
 
+			}
+			
+			for (Path path: dataController.getCoEgedPathList()){
+				/*OnlyRoute Condition*/
+			
+					PolyLineLayer networkLayer = new PolyLineLayer("XCoPath" + pathIndex);
+					
+				
+						networkLayer.setType(Layer.ORIGINAL_MAIN);
+						networkLayer.setColor(Color.GRAY);
+						
+					
+					networkLayer.setStroke(featureEnhance*4);
+					networkLayer.setLayerDepth(10);
+	
+						networkLayer.setVisible(true);
+					networkLayer.getLines().add(path.asJava2DList(2));
+
+					xMap.getMapContent().getLayers().add(
+							networkLayer
+							);
+					pathIndex++;
+			
 			}
 			
 			

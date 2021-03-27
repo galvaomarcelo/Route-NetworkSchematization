@@ -266,26 +266,26 @@ public class Path implements Cloneable{
 		}
 		
 		
-		System.out.println();
-		System.out.println("*********NEW PATH**********");
-		for(int i = 0; i < this.getNodeList().size(); i++) {	
-			System.out.print(i); 
-			if(this.getNodeList().get(i).getxGeom() != null ) {
-				
-				if(this.getNodeList().get(i).isRelevantRouteNode() ) 
-					System.out.print("REL:"); 
-					
-				
-				System.out.print(this.getNodeList().get(i).getxGeom());
-				
-			}
-			else {
-				System.out.print("NULL");
-			}
-			
-
-
-		}
+		//System.out.println();
+		//System.out.println("*********NEW PATH**********");
+//		for(int i = 0; i < this.getNodeList().size(); i++) {	
+//			System.out.print(i); 
+//			if(this.getNodeList().get(i).getxGeom() != null ) {
+//				
+//				if(this.getNodeList().get(i).isRelevantRouteNode() ) 
+//					System.out.print("REL:"); 
+//					
+//				
+//				System.out.print(this.getNodeList().get(i).getxGeom());
+//				
+//			}
+//			else {
+//				System.out.print("NULL");
+//			}
+//			
+//
+//
+//		}
 		
 	}
 	

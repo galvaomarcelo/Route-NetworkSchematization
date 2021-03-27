@@ -112,6 +112,7 @@ public class RouteDataController {
 		rbNodeMap = new HashMap<Integer, RoundAboutNode>();
 		adjacencyList = new HashMap<Integer, ArrayList<StreetNode>>();
 		circularOrderList = new HashMap<Integer, ArrayList<StreetNode>>();
+		routeAdjPathList = new ArrayList<Path>();
 		
 		polygonalFeatureList = new ArrayList<PolygonalFeature>();
 		pointFeatureList = new ArrayList<PointFeature>();
@@ -149,6 +150,13 @@ public class RouteDataController {
 		case 5:
 			RouteDAO.getInstance().getStreetNetWorkSimple(route, 0.002, streetNodeMap, rbNodeMap, adjacencyList, streetNetwork);
 			break;	
+		case 6:
+			RouteDAO.getInstance().getStreetNetWorkPreDefined(route, 0.002, streetNodeMap, rbNodeMap, adjacencyList, streetNetwork, false);
+			break;		
+		case 7:
+			RouteDAO.getInstance().getStreetNetWorkPreDefined2(route, 0.002, streetNodeMap, rbNodeMap, adjacencyList, streetNetwork, false);
+			break;	
+			
 		default:
 			break;
 		}
@@ -168,6 +176,7 @@ public class RouteDataController {
 		LineString RouteTargetLS = route.getRoutePath().asLineString(0);
 		System.out.println("Adj Edges analylis min length: " + RouteTargetLS.getLength()/100);
 		double adjEdgesMinLenght = Math.max(4.5601354442756007E-4/2, RouteTargetLS.getLength()/100);
+		adjEdgesMinLenght = adjEdgesMinLenght*2;
 		System.out.println("Adj Edges analylis min length: " + adjEdgesMinLenght);
 		TopoOperator3.breakStubEdges(streetNodeMap, adjacencyList, streetNetwork, adjEdgesMinLenght);
 		
@@ -200,9 +209,9 @@ public class RouteDataController {
 		anlyseRoute();
 		
 		
-		pathList = createTrackListLandMarkPreference();
+		pathList = createTrackListLandMarkPreference2();
 		//pathList = createTrackList2();
-		///pathList.addAll(coEgedPathList);
+		pathList.addAll(coEgedPathList);
 		isolateRoutePath(pathList);
 
 		landmarkMarkPathAanlyses(pathList);
@@ -228,11 +237,11 @@ public class RouteDataController {
 		}
 		
 		/**Break paths starting in the route and create path list only with stubs*/
-		separateStubsFromPaths();
+		//separateStubsFromPaths();
 		
 		/***This is removing nodes that are pointlike landmark control edges??*/
 		/**Remove Residuals (extras nodes and edges from street paths that are chunck) **/
-		chunckPahtResidualRemoval();
+		//chunckPahtResidualRemoval();
 		
 		
 		for(int nodeID: adjacencyList.keySet()) {
@@ -296,8 +305,11 @@ public class RouteDataController {
 					System.out.println("Strange path with only one node");
 				}
 				//double diagonal = Math.sqrt( Math.pow(sEnv.getHeight(), 2)  +  Math.pow(sEnv.getWidth(), 2));
-					double tolerance = Math.pow(pathLength,0.8)*(Math.pow((g-1)/10, 3))/(80/(g));
-					setPathRelevantPoints(pathList.get(i), tolerance, pathLength/2, true);
+//					double tolerance = Math.pow(pathLength,0.8)*(Math.pow((g-1)/10, 3))/(80/(g));
+					//tolerance = Math.max(50, tolerance);
+					double tolerance = g*15;
+					//System.out.println("Tolerance: " + tolerance);
+					setPathRelevantPoints(pathList.get(i), g, pathLength/3, true);
 					
 			}
 			
@@ -676,6 +688,9 @@ public class RouteDataController {
 			if(n.isRoundAbout())
 				n.setDecisionPoint(true);
 			
+			if(!n.isDecisionPoint() && n.getDegree() > 3 && n.getId() != 14620)
+				n.setDecisionPoint(true);
+			
 			nodeIndex++;
 		}
 		
@@ -1048,36 +1063,83 @@ public class RouteDataController {
 	/**Function to select route nodes to be schematize:
 	 * All DP, intersection, toponodes, roundabout, and exists(need to be included) are select. 
 	 * Plus sections(sublist) between those points, DouglasPeucker will tell wich ones need to be selected***/
-	private void setPathRelevantPoints(Path path, double tolerance, double densifyTolerance, boolean highQuality) {
+	private void setPathRelevantPoints(Path path, double g, double densifyTolerance, boolean highQuality) {
 		ArrayList<Point2D> pathPoints = path.asJava2DList(0);
 		ArrayList<Integer> relevantPoints1 = new ArrayList<Integer>();
 		
-
+	
 		int startIndex = 0;
 		int endIndex = 0;
 		path.getNodeList().get(startIndex).setRelevantRouteNode(true);
 		relevantPoints1.add(startIndex);
+		double length = 0;
 		for(int i = 1; i < pathPoints.size(); i++ ){
+			
+			length +=   path.getNodeList().get(i).getGeom().distance(path.getNodeList().get(i -1).getGeom() );
 			if(path.getNodeList().get(i).getTopoRelations().size() >=1 ||
 					(path.getNodeList().get(i).getDegree() != 2 ) 	||			
 					(i == pathPoints.size() -1) /**add this line because it was not anlaysing the last section of the close polygon*/
 					){
 				endIndex = i;
 				
-				Point2D simplifiedSubList2[] = simplifier.simplify(pathPoints.subList(startIndex, endIndex+1).toArray(new Point2D.Double[endIndex+1 -startIndex]), tolerance, highQuality);
-				int k = 1;
-				for ( int j = startIndex +1 ; j < endIndex+1  ; j++){
+				
+				if(endIndex - startIndex < 3){
 					
-					if ( pathPoints.get(j) == simplifiedSubList2[k]){
-						
-						path.getNodeList().get(j).setRelevantRouteNode(true);
-						relevantPoints1.add(j);
-						k++;
+					for ( int j = startIndex +1 ; j < endIndex+1  ; j++){						
+											
+							path.getNodeList().get(j).setRelevantRouteNode(true);							
+							relevantPoints1.add(j);
 						
 					}
+					
+					
+					
+				}
+				else {
+			
+					//System.out.println("long: " + length );
+					
+					//double tolerance = Math.pow(length,0.8)*(Math.pow((g/4), 3))/(80/(g));
+					double tolerance = Math.pow(length/60,0.8)*g;
+					//System.out.println("tolerance: " + tolerance);
+					//System.out.println("g*15: " + g*10);
+					
+					tolerance = Math.max(g*10, tolerance);
+					//double tolerance = g*15;
+					
+					//tolerance  = Math.max(length/30, tolerance);
+					Point2D simplifiedSubList2[] = simplifier.simplify(pathPoints.subList(startIndex, endIndex+1).toArray(new Point2D.Double[endIndex+1 -startIndex]), tolerance, highQuality);
+					
+					//System.out.println("orig lenght: " + (endIndex - startIndex) );
+					//System.out.println("after first: " + simplifiedSubList2.length);
+					double newTolerance = tolerance;
+					while(simplifiedSubList2.length < 4 && newTolerance > 10) {
+						newTolerance = newTolerance*0.8;
+						Point2D	simplifiedSubList3[] = simplifier.simplify(pathPoints.subList(startIndex, endIndex+1).toArray(new Point2D.Double[endIndex+1 -startIndex]), newTolerance, highQuality);
+						simplifiedSubList2 = simplifiedSubList3;
+						//System.out.println("after first: " + simplifiedSubList2.length);
+					}
+					//System.out.println("last: " + simplifiedSubList2.length);
+					int k = 1;
+					for ( int j = startIndex +1 ; j < endIndex+1  ; j++){
+						
+						if ( pathPoints.get(j) == simplifiedSubList2[k]){
+							
+							path.getNodeList().get(j).setRelevantRouteNode(true);
+							relevantPoints1.add(j);
+							k++;
+							
+						}
+//						else if( j == startIndex +1  || j == endIndex ) {
+//							path.getNodeList().get(j).setRelevantRouteNode(true);
+//							relevantPoints1.add(j);
+//						}
+					}
+					
+				
 				}
 				startIndex = endIndex;
-				
+				length = 0;
 				
 			
 			}
@@ -1088,14 +1150,17 @@ public class RouteDataController {
 		for(int i = 0; i < relevantPoints1.size(); i++){
 			if(	(path.getNodeList().get(relevantPoints1.get(i)).getDegree() != 2  ) 					
 					){
-				if(relevantPoints1.get(i) != 0 &&	!path.getNodeList().get((relevantPoints1.get(i) -1)).isRelevantRouteNode() 
-						) {
+				if( relevantPoints1.get(i) != 0 && !path.getNodeList().get((relevantPoints1.get(i) -1)).isRelevantRouteNode() 
+						
+						){
 					path.getNodeList().get((relevantPoints1.get(i) -1)).setRelevantRouteNode(true);
 					relevantPoints1.add(i , relevantPoints1.get(i) -1);
 					i++;
 					
 				}
-				if(relevantPoints1.get(i) < path.getNodeList().size()-1 && !path.getNodeList().get((relevantPoints1.get(i) +1)).isRelevantRouteNode()) {
+				if( relevantPoints1.get(i) < path.getNodeList().size()-1 && !path.getNodeList().get((relevantPoints1.get(i) +1)).isRelevantRouteNode()
+						
+						) {
 					path.getNodeList().get(relevantPoints1.get(i) + 1).setRelevantRouteNode(true);
 				    relevantPoints1.add(i + 1 , relevantPoints1.get(i) + 1);
 					
@@ -1109,26 +1174,26 @@ public class RouteDataController {
 
 
 		
-		for(int i = 0; i < relevantPoints1.size() - 1; i++){
-			if( path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(relevantPoints1.get(i +1)).getGeom()) > densifyTolerance*1.2 ) {
-				int k = relevantPoints1.get(i) + 1;
-				double dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
-				boolean achou = false;
-				while(!achou && k < path.getNodeList().size() -2) {
-					k++;
-					dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
-					if(dist > densifyTolerance  && k < relevantPoints1.get(i +1)) {
-						relevantPoints1.add(i + 1 , k);
-					    path.getNodeList().get(k).setRelevantRouteNode(true);
-					    achou = true;
-					}
-					else if( k == relevantPoints1.get(i +1))
-						achou = true;
-						
-					
-				}
-			}
-		}
+//		for(int i = 0; i < relevantPoints1.size() - 1; i++){
+//			if( path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(relevantPoints1.get(i +1)).getGeom()) > densifyTolerance*1.2 ) {
+//				int k = relevantPoints1.get(i) + 1;
+//				double dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
+//				boolean achou = false;
+//				while(!achou && k < path.getNodeList().size() -2) {
+//					k++;
+//					dist = path.getNodeList().get(relevantPoints1.get(i)).getGeom().distance(path.getNodeList().get(k).getGeom());
+//					if(dist > densifyTolerance  && k < relevantPoints1.get(i +1)) {
+//						relevantPoints1.add(i + 1 , k);
+//					    path.getNodeList().get(k).setRelevantRouteNode(true);
+//					    achou = true;
+//					}
+//					else if( k == relevantPoints1.get(i +1))
+//						achou = true;
+//						
+//					
+//				}
+//			}
+//		}
 		
 		
 
@@ -1227,7 +1292,7 @@ public class RouteDataController {
 
 	private ArrayList<Path> createTrackListStreetOnly() {
 		streetOnlyPathList = new ArrayList<Path>();
-		coEgedPathList = new ArrayList<Path>();
+		
 		Path routePath; 
 		
 		ArrayList<StreetNode> visitingList = new ArrayList<StreetNode>(); /* Lista de visitação */
@@ -1538,6 +1603,216 @@ public class RouteDataController {
 						}
 
 					}
+
+					/*se não há nó adjacente visitado fecha a track*/
+					if(j==0){
+						if(track.size()>1)
+							pathList.add(new Path(track));
+					}
+
+	
+					/*desempilha o nó e recomeça a track*/
+					streetNodeMap.get(mainPointId).setPostOrder(++postOrderIndex);
+					visitingList.remove(mainPoint);
+					track = new ArrayList<StreetNode>();	
+					newTrack = true;
+					
+										
+				}			
+			}
+			/* Check if unconnect parts of the graph has been visited */
+
+			bestPriority = 100;
+			allPointsVisited = true;
+			for(StreetNode n: streetNodeMap.values()){
+			
+			
+				
+				preOrderIndex = 0; /* ordem do empilhamento */
+				postOrderIndex = 0; /* ordem do desempilhamento */
+				/*index primeira parada com menor grau*/
+				if (n.getPreOrder() < 0){
+					
+					isDisconnected = true;
+					if(n.getPriority() < bestPriority){
+						bestPriority = n.getPriority();
+						mainPointId = n.getId();
+					}
+					allPointsVisited = false;
+				   	
+				} 	
+				
+			}
+			
+		}
+		pathList.add(0, routePath);
+		return pathList;
+	}
+	
+	
+
+	/**Divides the networt into paths. Similar to deep-first graph search, but gives preference to to paths connected to the route*/ 
+	private ArrayList<Path> createTrackListLandMarkPreference2() {
+		pathList = new ArrayList<Path>();
+		coEgedPathList = new ArrayList<Path>();
+		Path routePath; 
+		
+		ArrayList<StreetNode> visitingList = new ArrayList<StreetNode>(); /* Lista de visitação */
+		int preOrderIndex, postOrderIndex;
+		boolean allPointsVisited = false;
+		boolean isDisconnected = false;
+		boolean newTrack = false;/* to check if a new track/path is been build */
+		StreetNode mainPoint, adjPoint;
+		
+		
+		ArrayList<StreetNode> track = new ArrayList<StreetNode>();
+		
+		
+		preOrderIndex = 0; /* ordem do empilhamento */
+		postOrderIndex = 0; /* ordem do desempilhamento */
+		
+		/* inicializa o preordem e post ordem das paradas como -1* o s
+		 * ou seja "não visitado" e "não finalizado"
+		 */
+		
+	
+		for(StreetNode s: streetNodeMap.values()){
+			s.setPreOrder(-1);
+			s.setPostOrder(-1);					
+		}
+		for(StreetNode n: route.asNodeList()){
+			n.setPreOrder(++preOrderIndex);			
+			visitingList.add(n);
+			track.add(n);
+		}
+		routePath = new Path(track);
+		track = new ArrayList<StreetNode>();	
+		newTrack = true;
+		for (PolygonalTopo p: this.polygonalTopoList){
+			if( p.getType() != PolygonalTopo.SIMPLE_CROSSING &&
+					p.getType() != PolygonalTopo.ROUTE_STARTS_AT &&
+					p.getType() != PolygonalTopo.ROUTE_ENDS_AT ){
+				
+				
+				p.getEdgeList().get(0).getSourcePoint().setPreOrder(++preOrderIndex);
+				visitingList.add(p.getEdgeList().get(0).getSourcePoint());
+			}
+		}
+		boolean foundLandmark = true;
+		int mainPointId = route.getStart().getId();
+		int bestPriority = streetNodeMap.get(mainPointId).getPriority();
+		while(!allPointsVisited){
+			
+			StreetNode node = streetNodeMap.get(mainPointId);
+			
+				
+			node.setPreOrder(++preOrderIndex);
+			
+			visitingList.add(node);
+			
+			while (!visitingList.isEmpty()){
+				//mainPoint = getBestNode(visitingList);
+				/*if is a new track then give preference to start a track connected to the route*/
+				if(!newTrack)
+					mainPoint =	visitingList.get(visitingList.size() -1);
+				else
+					mainPoint = getBestNodeLandmarkPreference(visitingList, foundLandmark); /*select as mainpoint(first node) a node in the route*/
+				
+				if(isDisconnected && (mainPoint.getIsPointLMNode() < 1) && (mainPoint.getIsPolygonNode() < 1))
+					mainPoint.setDisconnected(true);
+				track.add(mainPoint);
+				mainPointId = mainPoint.getId();
+				boolean achou = false;
+				boolean endOfPolygonPath = false;
+				/*encontra uma parada adjacente ainda não  visitada */
+				/*Ordena lista de adjacencia para achar ponto que forma mernor angulo*/
+				if(track.size() > 1 && adjacencyList.get(mainPointId).size() > 2 ) {
+					putLowestBendOnTop(track.get(track.size() - 2), mainPoint, adjacencyList.get(mainPointId));
+
+					if(mainPoint.getIsPolygonNode() > 0 &&
+							mainPoint.getIsPolygonNode() == track.get(track.size() - 2).getIsPolygonNode() &&
+							adjacencyList.get(mainPointId).get(0).getIsPolygonNode() != mainPoint.getIsPolygonNode() ){
+						endOfPolygonPath = true;
+					}
+				
+				}
+				/*Busca parada adjacent não visitada, e empilha. 
+				  Terá preferencia paradas no topo da lista de adjacencia da ultima parara visitada(mainPoint)
+				  Interacao interronpida com break se achar parada*/
+				
+				if(!endOfPolygonPath)
+					for(int i = 0; i < adjacencyList.get(mainPointId).size(); i++){
+						adjPoint = adjacencyList.get(mainPointId).get(i);
+						if(adjPoint.getPreOrder() < 0 && achou == false){
+							
+							visitingList.add(adjPoint);
+							adjPoint.setPreOrder(++preOrderIndex);
+							achou = true;
+							newTrack = false;
+							break;
+							
+						}
+	
+					
+					}
+				/*Se não achar nenhum adjacente finaliza track, e cria complementar-edge*/
+				if(achou == false){
+					if(track.size() > 1 && adjacencyList.get(mainPointId).size() > 2 ) {
+						bestToClosePathOnTop(track.get(track.size() - 2), mainPoint, adjacencyList.get(mainPointId));
+
+					}		
+					/*procura nós que fechem a track, e cria coedges tracks*/
+					int j = 0;
+					for(int i = 0; i < adjacencyList.get(mainPointId).size(); i++){
+						adjPoint = adjacencyList.get(mainPointId).get(i);
+//						if(adjPoint.getPostOrder() < 0 &&							
+//								adjPoint != visitingList.get(visitingList.size() -2)){						
+						if(adjPoint.getPostOrder() < 0 &&
+								 track.size()>1 &&
+								adjPoint != track.get(track.size() -2)){
+							
+							j++;
+							/* adiciona primeiro adjacente (ja vsitado) e fecha circulo */
+							if(j==1){
+								
+								track.add(adjPoint);
+								pathList.add(new Path(track));
+								//coEgedPathList.remove(coEgedPathList.size() - 1);
+								
+							
+							}
+							/*give up trying to find the co-edges*/
+							/* cria coedge para os outros*/
+//							else{
+//								ArrayList<StreetNode> coEdgetrack = new ArrayList<StreetNode>();
+//								coEdgetrack.add( mainPoint );
+//								coEdgetrack.add( adjPoint );	
+//								coEgedPathList.add(new Path(coEdgetrack));
+//								
+//								/*gambi para saber quantas coEdge*/
+//							}
+							
+						}						
+						else if( adjPoint.getDegree() > 2 && track.size() <2 && adjPoint.getPreOrder() > -1 && adjPoint.getPostOrder() < 0  &&
+								Math.abs(adjPoint.getPreOrder() - mainPoint.getPreOrder() ) > 1	&& adjPoint != visitingList.get(visitingList.size() -2)){
+							
+							System.out.println("mainPreOrder: " + mainPoint.getPreOrder());
+							System.out.println("adjPreOrder: " + adjPoint.getPreOrder());
+						
+							System.out.println("mainPostOrder: " + mainPoint.getPostOrder());
+							System.out.println("adjPostOrder: " + adjPoint.getPostOrder());
+							
+							ArrayList<StreetNode> coEdgetrack = new ArrayList<StreetNode>();
+							coEdgetrack.add( mainPoint );
+							coEdgetrack.add( adjPoint );	
+							coEgedPathList.add(new Path(coEdgetrack));
+							
+						}
+	
+					
+					}
+
+					
 
 					/*se não há nó adjacente visitado fecha a track*/
 					if(j==0){

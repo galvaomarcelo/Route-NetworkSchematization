@@ -201,10 +201,10 @@ public class PathReport {
 		/* 		String pathText  = "id, n , m , proportion , type ,  name , length , fixed X, ILP exec. , time , W(bend) , R(bend), W(dir) , R(dir), W(dist) , R(dist), W(distCN) , R(distCN), W(prop) , R(prop)\n ";*/
 		String text = new String();
 		text = text.concat("path " + pathId + " , " + numberOfNodes + " , " +  numberOfEdges +  " , " + propdf.format(proportion)  +  " , " +  pathType  +  " , " + pathName  +  " , " +  resultdf.format(pathLenght)  +  " , " + fixedExtraCrossings  +  " , " + executions  +  " , " + executionTime  +  " , " 
-		+ weightdf.format(bendSC.getWeight()) + "/b"  +  " , " +  weightdf.format(bendSC.getNormalizedWeight()) +" , " +  resultdf.format(bendSC.getResult()) +  " , " 
+		//+ weightdf.format(bendSC.getWeight()) + "/b"  +  " , " +  weightdf.format(bendSC.getNormalizedWeight()) +" , " +  resultdf.format(bendSC.getResult()) +  " , " 
 		+ weightdf.format(orientationSC.getWeight()) + "/m"  +  " , " + weightdf.format(orientationSC.getNormalizedWeight()) +" , " + resultdf.format(orientationSC.getResult())  +  " , " 
-		+ weightdf.format(distanceWeightSC.getWeight())  + "/n" +  " , " + weightdf.format(distanceWeightSC.getNormalizedWeight()) +" , " + resultdf.format(distanceWeightSC.getResult())  +  " , " 
-		+  weightdf.format(distanceTopoWeightSC.getWeight())  +  " , " +  weightdf.format(distanceTopoWeightSC.getNormalizedWeight()) +" , " + resultdf.format(distanceTopoWeightSC.getResult()) +  " , "  
+		//+ weightdf.format(distanceWeightSC.getWeight())  + "/n" +  " , " + weightdf.format(distanceWeightSC.getNormalizedWeight()) +" , " + resultdf.format(distanceWeightSC.getResult())  +  " , " 
+		//+  weightdf.format(distanceTopoWeightSC.getWeight())  +  " , " +  weightdf.format(distanceTopoWeightSC.getNormalizedWeight()) +" , " + resultdf.format(distanceTopoWeightSC.getResult()) +  " , "  
 		+  weightdf.format(proportionWeightSC.getWeight()) + "/m"+  " , " + weightdf.format(proportionWeightSC.getNormalizedWeight()) +" , " + resultdf.format(proportionWeightSC.getResult()) +  " \n "  );
 		
 		

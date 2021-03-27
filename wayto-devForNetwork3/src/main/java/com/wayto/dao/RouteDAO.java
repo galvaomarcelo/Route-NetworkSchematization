@@ -603,7 +603,7 @@ public class RouteDAO extends ConnectionFactory {
 			
 				sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
 						"FROM "+edgeTable+" AS e \r\n" +
-						"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+routeLS+"',4326), 0.018))\r\n " +
+						"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+routeLS+"',4326), 0.027))\r\n " +
 						"AND "+routeSelection+" \r\n";	
 			
 			
@@ -671,8 +671,6 @@ public class RouteDAO extends ConnectionFactory {
 		}finally{
 			closeConnection(con, pstmt, rs);
 		}
-
-
 
 		return true;
 	}
@@ -1400,6 +1398,285 @@ public class RouteDAO extends ConnectionFactory {
 
 
 			return true;
+		}
+
+
+		public boolean getStreetNetWorkPreDefined(Route route, double d, Map<Integer, StreetNode> streetNodeMap,
+				Map<Integer, RoundAboutNode> rbNodeMap, Map<Integer, ArrayList<StreetNode>> adjacencyList,
+				StreetNetworkTopological streetNetwork, boolean includeStubs) {
+			
+
+			  /**
+			Highway1 11
+			Highway link 12
+			Highway2(trunk) 13
+			Highway2(trunk) link 14
+			Primary 15
+			Primary link 16
+			Secondary 21
+			Secondary link 22
+			Tertiary 31
+			Tertiary link 32
+			Residential 41
+			Unknow 42
+			Not classified/Serivice/Rural  43
+			Lowpriority(not street)  100
+			*/
+
+
+			Connection con = null;
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+
+			con = createConection();
+
+		
+			System.out.println(route.getRoutePath().getNodeList());
+			LineString routeLS = route.getRoutePath().asLineString(4);
+			double extend = routeLS.getEnvelopeInternal().maxExtent();
+			String sqlQuery = "";
+			String routeSelection = null;
+			System.out.println("extend: " + extend);
+			try {
+
+				/*	sqlQuery = "SELECT e.*, ST_AsGeoJSON(e.geom_way) AS geom \r\n" +
+						"FROM "+edgeTable+" AS e \r\n" +
+						"JOIN (SELECT ST_BUFFER(ST_LineMerge(ST_UNION(geom_way)),0.002) AS route_geom \r\n" +
+						"FROM pgr_dijkstra(' SELECT id AS id, source AS source, target AS target, cost AS cost , reverse_cost::float8 AS reverse_cost FROM "+edgeTable+" ', "+sourceNodeId+", "+targetNodeId+", true) \r\n" +
+						"JOIN "+edgeTable+" ON "+edgeTable+".id = edge) route\r\n" +
+						"ON ST_Intersects(e.geom_way, route.route_geom)\r\n";*/
+				if(includeStubs) {
+				/***Select Roads very close to the route STUBS***/
+				
+				
+					sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
+							"FROM "+edgeTable+" AS e \r\n" +
+							"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+routeLS+"',4326), 0.0000000009))\r\n " +
+							//"AND (e.clazz = 31 OR e.clazz = 41 OR e.clazz = 42 OR e.clazz = 43) \r\n";	
+					        "AND (e.clazz = 31 OR e.clazz = 41 OR e.clazz = 43) \r\n";
+					//"AND (e.clazz <> 11 AND e.clazz <> 13 AND e.clazz <> 15 AND e.clazz <> 21) \r\n";
+		
+					System.out.println(sqlQuery);
+		
+					pstmt = con.prepareStatement(sqlQuery);
+					rs = pstmt.executeQuery();
+		
+					loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, true );
+					rs.close();
+					pstmt.close();
+				}
+				
+				/***Select Roads close to the route***/
+				if(extend < 0.04)
+					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21  OR e.clazz = 31 ) ";
+				else if (extend < 0.1)	
+					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 OR e.clazz = 31 ) ";
+				else	
+					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 OR e.clazz = 31 ) ";
+				
+					sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
+							"FROM "+edgeTable+" AS e \r\n" +
+							"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+routeLS+"',4326), 0.020))\r\n " +
+							"AND "+routeSelection+" \r\n";	
+				
+				
+
+				System.out.println(sqlQuery);
+
+				pstmt = con.prepareStatement(sqlQuery);
+				rs = pstmt.executeQuery();
+
+				loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, false );
+				rs.close();
+				pstmt.close();
+				
+				
+				
+				/***Select Roads close to the route***/
+				
+					routeSelection =  "(e.clazz = 311 OR e.clazz = 43 ) ";
+				
+					sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
+							"FROM "+edgeTable+" AS e \r\n" +
+							"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+routeLS+"',4326), 0.0045))\r\n " +
+							"AND "+routeSelection+" \r\n";	
+				
+				
+
+				System.out.println(sqlQuery);
+
+				pstmt = con.prepareStatement(sqlQuery);
+				rs = pstmt.executeQuery();
+
+				loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, false );
+				rs.close();
+				pstmt.close();
+				
+				
+
+
+	//
+				/*******Select Main Roads in MinimunBounding Circle *******/
+
+//				if(extend > 0.10)
+//					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 )";
+//				else
+//					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 )";
+	//
+//				sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
+//						"FROM "+edgeTable+" AS e \r\n" +
+//						"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_MinimumBoundingCircle(ST_GeomFromText('"+routeLS+"',4326)), "+extend/100+"))\r\n" +
+//						"AND "+routeSelection+" \r\n";
+	//
+//				System.out.println(sqlQuery);
+	//
+//				pstmt = con.prepareStatement(sqlQuery);
+//				rs = pstmt.executeQuery();
+	//
+//				loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, false );
+//				rs.close();
+//			   pstmt.close();
+
+//				/*******Select Roads around Origin *******/
+
+				if(extend > 0.10)
+					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 OR e.clazz = 31 OR e.clazz = 41)";
+				else
+					routeSelection =  "(e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 OR e.clazz = 31 OR e.clazz = 41)";
+
+				sqlQuery = "SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" +
+						"FROM "+edgeTable+" AS e \r\n" +
+						"WHERE (ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+route.getStart().getCoordinate()+"',4326), 0.003))\r\n " +
+						"OR ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('"+route.getEnd().getCoordinate()+"',4326), 0.003)) ) \r\n " +
+						"AND "+routeSelection+" \r\n";	
+
+				
+				System.out.println(sqlQuery);
+
+				pstmt = con.prepareStatement(sqlQuery);
+				rs = pstmt.executeQuery();
+
+				loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, false );
+
+				rs.close();
+				pstmt.close();
+
+
+			} catch (Exception e) {
+				System.out.println("Fail to list RoutPath" + e);
+				return false;
+			}finally{
+				closeConnection(con, pstmt, rs);
+			}
+
+			return true;
+			
+			
+		}
+		
+		public boolean getStreetNetWorkPreDefined2(Route route, double d, Map<Integer, StreetNode> streetNodeMap,
+				Map<Integer, RoundAboutNode> rbNodeMap, Map<Integer, ArrayList<StreetNode>> adjacencyList,
+				StreetNetworkTopological streetNetwork, boolean includeStubs) {
+			
+
+			  /**
+			Highway1 11
+			Highway link 12
+			Highway2(trunk) 13
+			Highway2(trunk) link 14
+			Primary 15
+			Primary link 16
+			Secondary 21
+			Secondary link 22
+			Tertiary 31
+			Tertiary link 32
+			Residential 41
+			Unknow 42
+			Not classified/Serivice/Rural  43
+			Lowpriority(not street)  100
+			*/
+
+			
+			ArrayList<String> queries = new ArrayList<String>();
+			
+			/**Major Streets*/
+			queries.add("SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" + 
+					"FROM mland_2po_4pgr3srb AS e \r\n" + 
+					"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('LINESTRING (7.9014356 51.7582985, 7.9013973 51.7586567, 7.9021901 51.7587209, 7.9020684 51.7595251, 7.9020389 51.7597925, 7.9022087 51.7608913, 7.9039855 51.7610159, 7.9045226 51.7610784, 7.9051709 51.7611287, 7.907048 51.7613225, 7.9096113 51.761855, 7.9108649 51.7621297, 7.9115985 51.7622852, 7.9106908 51.7640451, 7.9105804 51.7645768, 7.9120181 51.7647436, 7.9129834 51.7648073, 7.9132079 51.7648225, 7.9144081 51.7649026, 7.917529 51.7652719, 7.9181451 51.7653877, 7.9190393 51.7656233, 7.9198518 51.7658719, 7.9202922 51.766013, 7.9206719 51.7661418, 7.9241607 51.7673152, 7.9253054 51.7677282, 7.9266413 51.7681796, 7.9289726 51.7686429, 7.9297355 51.768678, 7.9304559 51.7686668, 7.9311113 51.7686412, 7.938005 51.7676272, 7.9413715 51.766909, 7.9421813 51.7667149, 7.9437663 51.7663666, 7.95182 51.7656585, 7.9653383 51.7662464, 7.9685866 51.7666496, 7.9762877 51.7682887, 7.9789178 51.7685443, 7.979665698610883 51.7686761363438, 7.9888102 51.7622911, 7.9977334 51.7598313, 8.0011497 51.7601255, 8.001754559751475 51.76017743266081, 8.0023342 51.7602272, 8.0041192 51.7603851, 8.0096446 51.760394, 8.017678 51.758453, 8.0206933 51.7580647, 8.0216207 51.7580138, 8.0219031 51.7580228, 8.0246054 51.758336, 8.0259517 51.7582145, 8.0265729 51.7580638, 8.0294201 51.7570947, 8.0307993 51.7566065, 8.0321189 51.756074, 8.0336396 51.7554147, 8.0337623 51.7551582, 8.034817 51.7552928, 8.0354944 51.7560833, 8.0379216 51.7573278, 8.0382867 51.7574517, 8.0394169 51.7577856, 8.0396654 51.7578356, 8.0408829 51.7580759, 8.0415353 51.7580553, 8.043068 51.7578119, 8.0434301 51.757702, 8.042949 51.7571286, 8.0423002 51.7563317, 8.0422792 51.7563008, 8.0419805 51.7559434, 8.043115 51.7555773, 8.042559875841512 51.75487391448508)',4326), 0.027))\r\n" + 
+					" AND (e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21  OR e.clazz = 31 )  ");
+			
+			/**Around origins*/
+			queries.add("SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" + 
+					"FROM mland_2po_4pgr3srb AS e \r\n" + 
+					"WHERE (ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('POINT (7.9014356 51.7582985)',4326), 0.003))\r\n" + 
+					" OR ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('POINT (8.042559875841512 51.75487391448508)',4326), 0.003)) ) \r\n" + 
+					" AND ( e.clazz = 41) ");
+			
+			
+			/**Around origins 2*/
+			queries.add("SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" + 
+					"FROM mland_2po_4pgr3srb AS e \r\n" + 
+					"WHERE (ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('POINT (7.9014356 51.7582985)',4326), 0.022))\r\n" + 
+					" OR ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('POINT (8.042559875841512 51.75487391448508)',4326), 0.0065)) ) \r\n" + 
+					" AND (e.clazz = 11 OR e.clazz = 13 OR e.clazz = 15 OR e.clazz = 21 OR e.clazz = 31) ");
+			
+			
+			/**Stubs*/
+//			queries.add("SELECT e.*, ST_AsBinary(rbsourcegeom) as rbsgeom, ST_AsBinary(rbtargetgeom) as rbtgeom, ST_AsBinary(geom_way) AS geom, ST_AsGeoJSON(e.geom_way) AS geomjson \r\n" + 
+//					"FROM mland_2po_4pgr3srb AS e \r\n" + 
+//					"WHERE ST_Intersects(e.geom_way, ST_BUFFER(ST_GeomFromText('LINESTRING (7.9014356 51.7582985, 7.9013973 51.7586567, 7.9021901 51.7587209, 7.9020684 51.7595251, 7.9020389 51.7597925, 7.9022087 51.7608913, 7.9039855 51.7610159, 7.9045226 51.7610784, 7.9051709 51.7611287, 7.907048 51.7613225, 7.9096113 51.761855, 7.9108649 51.7621297, 7.9115985 51.7622852, 7.9106908 51.7640451, 7.9105804 51.7645768, 7.9120181 51.7647436, 7.9129834 51.7648073, 7.9132079 51.7648225, 7.9144081 51.7649026, 7.917529 51.7652719, 7.9181451 51.7653877, 7.9190393 51.7656233, 7.9198518 51.7658719, 7.9202922 51.766013, 7.9206719 51.7661418, 7.9241607 51.7673152, 7.9253054 51.7677282, 7.9266413 51.7681796, 7.9289726 51.7686429, 7.9297355 51.768678, 7.9304559 51.7686668, 7.9311113 51.7686412, 7.938005 51.7676272, 7.9413715 51.766909, 7.9421813 51.7667149, 7.9437663 51.7663666, 7.95182 51.7656585, 7.9653383 51.7662464, 7.9685866 51.7666496, 7.9762877 51.7682887, 7.9789178 51.7685443, 7.979665698610883 51.7686761363438, 7.9888102 51.7622911, 7.9977334 51.7598313, 8.0011497 51.7601255, 8.001754559751475 51.76017743266081, 8.0023342 51.7602272, 8.0041192 51.7603851, 8.0096446 51.760394, 8.017678 51.758453, 8.0206933 51.7580647, 8.0216207 51.7580138, 8.0219031 51.7580228, 8.0246054 51.758336, 8.0259517 51.7582145, 8.0265729 51.7580638, 8.0294201 51.7570947, 8.0307993 51.7566065, 8.0321189 51.756074, 8.0336396 51.7554147, 8.0337623 51.7551582, 8.034817 51.7552928, 8.0354944 51.7560833, 8.0379216 51.7573278, 8.0382867 51.7574517, 8.0394169 51.7577856, 8.0396654 51.7578356, 8.0408829 51.7580759, 8.0415353 51.7580553, 8.043068 51.7578119, 8.0434301 51.757702, 8.042949 51.7571286, 8.0423002 51.7563317, 8.0422792 51.7563008, 8.0419805 51.7559434, 8.043115 51.7555773, 8.042559875841512 51.75487391448508)',4326), 0.0000000009))\r\n" + 
+//					" AND (e.clazz = 31 OR e.clazz = 41 OR e.clazz = 43) ");
+			
+
+			Connection con = null;
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+
+			con = createConection();
+
+			String sqlQuery = "";
+
+		
+			try {
+
+				/*	sqlQuery = "SELECT e.*, ST_AsGeoJSON(e.geom_way) AS geom \r\n" +
+						"FROM "+edgeTable+" AS e \r\n" +
+						"JOIN (SELECT ST_BUFFER(ST_LineMerge(ST_UNION(geom_way)),0.002) AS route_geom \r\n" +
+						"FROM pgr_dijkstra(' SELECT id AS id, source AS source, target AS target, cost AS cost , reverse_cost::float8 AS reverse_cost FROM "+edgeTable+" ', "+sourceNodeId+", "+targetNodeId+", true) \r\n" +
+						"JOIN "+edgeTable+" ON "+edgeTable+".id = edge) route\r\n" +
+						"ON ST_Intersects(e.geom_way, route.route_geom)\r\n";*/
+				
+				
+				for(String query: queries) {
+					
+					sqlQuery = query;
+					
+					System.out.println(sqlQuery);
+					
+					pstmt = con.prepareStatement(sqlQuery);
+					rs = pstmt.executeQuery();
+		
+					loadRoadsToDataStructure(rs, streetNodeMap, rbNodeMap, streetNetwork, adjacencyList, true );
+					rs.close();
+					pstmt.close();
+					
+					
+					
+				}
+				
+
+
+
+			} catch (Exception e) {
+				System.out.println("Fail to list RoutPath" + e);
+				return false;
+			}finally{
+				closeConnection(con, pstmt, rs);
+			}
+
+			return true;
+			
+			
 		}
 
 		
