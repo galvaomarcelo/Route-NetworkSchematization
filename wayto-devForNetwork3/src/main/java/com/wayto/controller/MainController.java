@@ -255,6 +255,7 @@ public class MainController {
 				/***SCHEMATIZE THE ROUTE***/
 				try {
 					
+					
 					OptimizerOperator2.routeOptimizerLazyTopologyCheck(
 							dataController.getStreetNodeMap(),							
 							dataController.getCircularOrderList(),
