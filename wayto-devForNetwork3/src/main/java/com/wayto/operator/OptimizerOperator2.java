@@ -4051,8 +4051,11 @@ public class OptimizerOperator2 {
 						edges.add(edge);
 			
 						
-						double focusX = (nodeMap.get(edge[0]).getProjectGeom().getX() + nodeMap.get(edge[1]).getProjectGeom().getX())/2 ;
-						double focusY = (nodeMap.get(edge[0]).getProjectGeom().getY() + nodeMap.get(edge[1]).getProjectGeom().getY())/2 ;
+						//double focusX = (nodeMap.get(edge[0]).getProjectGeom().getX() + nodeMap.get(edge[1]).getProjectGeom().getX())/2 ;
+						//double focusY = (nodeMap.get(edge[0]).getProjectGeom().getY() + nodeMap.get(edge[1]).getProjectGeom().getY())/2 ;
+						
+						double focusX = (nodeMap.get(edge[0]).getGeom().getX() + nodeMap.get(edge[1]).getGeom().getX())/2 ;
+						double focusY = (nodeMap.get(edge[0]).getGeom().getY() + nodeMap.get(edge[1]).getGeom().getY())/2 ;
 						
 						//double proportion = getProportionToPoint( focusX, focusY , streetNetwork, networkEnvelopExtend);
 						double proportion = getProportionToPoint( focusX, focusY , allPathList, networkEnvelopExtend);
@@ -4085,8 +4088,8 @@ public class OptimizerOperator2 {
 				
 			}
 			
-//			Collections.sort(edgesXProportion);
-//			System.out.println(edgesXProportion);
+			//Collections.sort(edgesXProportion);
+			System.out.println(edgesXProportion);
 						
 			  // Get the iterator over the HashMap 
 	        Iterator<Map.Entry<Integer, ArrayList<StreetNode>> > 
@@ -4431,7 +4434,8 @@ public class OptimizerOperator2 {
 				
 			}
 			double MAdjVertice = 100*maxAdjD; /* D max distance between two vertices*/
-			double L = adjVerticesMinDist;
+			//double L = adjVerticesMinDist;
+			double L = minNonAdjEdgeDist/3;
 			for (int i = 0; i < m; i++) {
 
 				/*get index of edge nodes in the node list*/
@@ -4461,7 +4465,7 @@ public class OptimizerOperator2 {
 						leftSide1 = cplex.diff(z2[v1i], z2[v2i]);
 						leftSide2 = cplex.diff(z2[v2i],  z2[v1i]);
 						
-						rightSide2 = cplex.diff(2*L, rightSide);
+						rightSide2 = cplex.diff(L, rightSide);
 						leftSide3 = cplex.diff(z1[v2i],  z1[v1i]);
 						
 						cplex.addLe(leftSide1, rightSide);
@@ -4490,7 +4494,7 @@ public class OptimizerOperator2 {
 						leftSide1 = cplex.diff(z1[v1i], z1[v2i]);
 						leftSide2 = cplex.diff(z1[v2i],  z1[v1i]);
 						
-						rightSide2 = cplex.diff(2*L, rightSide);
+						rightSide2 = cplex.diff(L, rightSide);
 						leftSide3 = cplex.diff(z2[v1i],  z2[v2i]);
 						
 						cplex.addLe(leftSide1, rightSide);
@@ -4516,7 +4520,7 @@ public class OptimizerOperator2 {
 						leftSide1 = cplex.diff(z2[v1i], z2[v2i]);
 						leftSide2 = cplex.diff(z2[v2i],  z2[v1i]);
 						
-						rightSide2 = cplex.diff(2*L, rightSide);
+						rightSide2 = cplex.diff(L, rightSide);
 						leftSide3 = cplex.diff(z1[v1i],  z1[v2i]);
 						
 						cplex.addLe(leftSide1, rightSide);
@@ -4543,7 +4547,7 @@ public class OptimizerOperator2 {
 						leftSide1 = cplex.diff(z1[v1i], z1[v2i]);
 						leftSide2 = cplex.diff(z1[v2i],  z1[v1i]);
 						
-						rightSide2 = cplex.diff(2*L, rightSide);
+						rightSide2 = cplex.diff(L, rightSide);
 						leftSide3 = cplex.diff(z2[v2i],  z2[v1i]);
 						
 						cplex.addLe(leftSide1, rightSide);
@@ -5195,7 +5199,10 @@ public class OptimizerOperator2 {
 				
 				double edgeOrginalLength = nodeMap.get(edges.get(i)[0]).getProjectGeom().distance(nodeMap.get(edges.get(i)[1]).getProjectGeom());
 				double expectedgLength = edgesXProportion.get(i)*edgeOrginalLength;
-				
+				if(sec[i][0][1]%2 == 1 )
+					expectedgLength = expectedgLength*1.4;
+				else
+					expectedgLength = expectedgLength;
 				//System.out.println("origi:" + edgeOrginalLength + " expect: " + expectedgLength );
 				//edgeProportion.add(pt1.distance(pt2)/routeLenght);
 				edgeExpectedLength.add(expectedgLength);
@@ -10709,7 +10716,7 @@ public class OptimizerOperator2 {
 				return sumLenghtX/sumLenghtOriginal;
 		}
 		
-		private static double getProportionToPoint(double focusX, double focusY, ArrayList<Path> allPathList,
+		public static double getProportionToPoint(double focusX, double focusY, ArrayList<Path> allPathList,
 				double maxExtend) {
 			
 			ArrayList<StreetNode[]> xEdges = new ArrayList<StreetNode[]>();
@@ -10730,8 +10737,12 @@ public class OptimizerOperator2 {
 
 							relevantEdge[1] = node2;
 
-							Point sourceOrigPoint = relevantEdge[0].getProjectGeom();
-							Point targetOrigPoint = relevantEdge[1].getProjectGeom();
+							//Point sourceOrigPoint = relevantEdge[0].getProjectGeom();
+							//Point targetOrigPoint = relevantEdge[1].getProjectGeom();
+							
+							Point sourceOrigPoint = relevantEdge[0].getGeom();
+							Point targetOrigPoint = relevantEdge[1].getGeom();
+							
 							double edgeCenterX = (sourceOrigPoint.getCoordinate().x + targetOrigPoint.getCoordinate().x)/2;
 							double edgeCenterY = (sourceOrigPoint.getCoordinate().y + targetOrigPoint.getCoordinate().y)/2;
 
@@ -10775,30 +10786,55 @@ public class OptimizerOperator2 {
 				Point sourceXPoint = xEdges.get(i)[0].getxGeom();
 				Point targetXPoint = xEdges.get(i)[1].getxGeom();
 				
-				double normalDist = Math.max(1,100*xEdgeDistanceFocus.get(i)/maxExtend);
-				
+				//double normalDist = 100*xEdgeDistanceFocus.get(i)/maxExtend;
+				double normalDist = xEdgeDistanceFocus.get(i)/1000;
 				System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
-				
 				/**Select edges with normaldist < 50*/
 				//if(normalDist < 100) {
 					
 					if(sourceXPoint != null && targetXPoint != null) {
-						double distFactor = Math.pow(normalDist, 4);
-						System.out.println("Dist factor : " + 1/distFactor);
+						/*1 = 1km*/
+						if(normalDist > 4)
+							normalDist = 4;
+						else if(normalDist < 0.1)
+							normalDist = 0.1;
+//						else
+//							System.out.println(" normal dist: " + normalDist);
+						
+						double distFactor = 1;
+						
+						if(normalDist < 0.34)
+							distFactor = -20*normalDist  + 80;
+						else
+							distFactor = 1/Math.pow(normalDist, 4);
+						
+						//System.out.println("dist: " + xEdgeDistanceFocus.get(i) + " normal dist: " + normalDist);
+						//double distFactor = 1.2 - Math.log10(normalDist - 0.9);
+						//System.out.println("Dist factor : " + distFactor);
+						//System.out.println("Dist factor2 : " + distFactor2);
 						double lengthOrig = sourceOrigPoint.distance(targetOrigPoint);
 						double lengthX = sourceXPoint.distance(targetXPoint);
-						sumLenghtOriginal += edgesWeight.get(i)*(lengthOrig/distFactor);
-						sumLenghtX += edgesWeight.get(i)*(lengthX/distFactor);
+						//double lengthInfluence = lengthX/lengthOrig;
+						
+						
+						//sumLenghtOriginal += lengthInfluence*edgesWeight.get(i)*(lengthOrig*distFactor);
+						sumLenghtOriginal += lengthOrig*distFactor;
+						
+						//sumLenghtX += lengthInfluence*edgesWeight.get(i)*(lengthX*distFactor);
+						sumLenghtX += lengthX*distFactor;
+						
 						//System.out.println("is inside : ");
 					}
 				//}
 				
 				
 			}
-			if(Double.isNaN(sumLenghtX/sumLenghtOriginal))
+			double finalEdgeProportion = sumLenghtX/sumLenghtOriginal;
+			System.out.println("Final Edge Proportion: " + finalEdgeProportion);
+			if(Double.isNaN(finalEdgeProportion))
 				return 1;
 			else
-				return sumLenghtX/sumLenghtOriginal;
+				return finalEdgeProportion;
 			
 			
 		}

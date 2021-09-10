@@ -79,7 +79,7 @@ public class RouteDataController {
 	private ArrayList<PolygonalTopo> polygonalTopoList;
 	private ArrayList<PointTopo> pointTopoList;
 	
-
+	private LineString RouteTargetLS;
 	
 	Simplify<Point2D> simplifier = new Simplify<Point2D>(new Point2D[0], point2DPointExtractor);
 	
@@ -173,12 +173,12 @@ public class RouteDataController {
 		TopoOperator3.refineEdges(route, streetNodeMap, adjacencyList, streetNetwork);
 		//symplifyPolygons(polygonalFeatureList, 9);
 		
-		LineString RouteTargetLS = route.getRoutePath().asLineString(0);
+		RouteTargetLS = route.getRoutePath().asLineString(0);
 		System.out.println("Adj Edges analylis min length: " + RouteTargetLS.getLength()/100);
 		double adjEdgesMinLenght = Math.max(4.5601354442756007E-4/2, RouteTargetLS.getLength()/100);
 		adjEdgesMinLenght = adjEdgesMinLenght*2;
 		System.out.println("Adj Edges analylis min length: " + adjEdgesMinLenght);
-		TopoOperator3.breakStubEdges(streetNodeMap, adjacencyList, streetNetwork, adjEdgesMinLenght);
+		//TopoOperator3.breakStubEdges(streetNodeMap, adjacencyList, streetNetwork, adjEdgesMinLenght);
 		
 		end = System.currentTimeMillis();
 		System.out.println("load list time: " + (end - start) );
@@ -205,8 +205,7 @@ public class RouteDataController {
 			
 		}
 		
-		/**Calculate and Update Decision Points*/
-		anlyseRoute();
+		
 		
 		
 		pathList = createTrackListLandMarkPreference2();
@@ -221,11 +220,13 @@ public class RouteDataController {
 		
 		removeDisconnectNodes();
 		
-	
+
 		
 		chunckPahtAnalyses(pathList);
 		if(reduceStubs)
 			reduceChuckPaths();
+		
+		
 		
 
 		/**Add extra vertices to edges of paths (landmark paths too?) adjacent to the route: new stub is edge min lenght is adjEdgesMinLenght**/
@@ -235,6 +236,9 @@ public class RouteDataController {
 			//int snId = streetNodeMap.get(nodeID).getId();
 			streetNodeMap.get(nodeID).setDegree(adjacencyList.get(nodeID).size());
 		}
+		
+		/**Calculate and Update Decision Points*/
+		anlyseRoute();
 		
 		/**Break paths starting in the route and create path list only with stubs*/
 		//separateStubsFromPaths();
@@ -253,7 +257,7 @@ public class RouteDataController {
 		
 		//float routeg = 5.5f; /* any number 0-10*/
 		float routeg = 7.5f; /* any number 0-10*/
-		Envelope routeEnvelpe = route.getRoutePath().asLineString(0).getEnvelopeInternal();
+		Envelope routeEnvelpe = RouteTargetLS.getEnvelopeInternal();
 		double diagonal = Math.sqrt( Math.pow(routeEnvelpe.getHeight(), 2)  +  Math.pow(routeEnvelpe.getWidth(), 2));
 		double routetolerance = diagonal*(Math.pow((routeg-1)/10, 3))/(80/(routeg));
 		//getRouteRelevantPointsOldDelete2();
@@ -678,19 +682,35 @@ public class RouteDataController {
 				double bendAngle =  theta2 - theta1;
 				if (bendAngle < 0)
 					bendAngle = bendAngle + 2*Math.PI;
-				System.out.println("Turn on non DP is : " + bendAngle);
+				//System.out.println("Turn on non DP is : " + bendAngle);
 				if ( !(bendAngle > (2*Math.PI -0.8)   ||  bendAngle < 0.8)) {
-					System.out.println(Math.toDegrees(bendAngle));
-					System.out.println("Why im i adding this: " + bendAngle);
+					//System.out.println(Math.toDegrees(bendAngle));
+					//System.out.println("Why im i adding this: " + bendAngle);
 					n.setDecisionPoint(true);
 				}
 			}
 			if(n.isRoundAbout())
 				n.setDecisionPoint(true);
 			
-			if(!n.isDecisionPoint() && n.getDegree() > 3 && n.getId() != 14620)
-				n.setDecisionPoint(true);
+//			if(!n.isDecisionPoint() && n.getDegree() > 3)
+//				n.setDecisionPoint(true);
+//			
+			/*ahlen to luderinghausen*/
+//			if(n.getId() == 39000 || n.getId() == 1162 || n.getId() == 10074 || n.getId() == 4056 ||  n.getId() == 14405 || n.getId() == 25749 || n.getId() == 45615)
+//				n.setDecisionPoint(true);
+//			
+//			/*ahlen to luderinghausen*/
+//			if(n.getId() == 50851|| n.getId() == 16164 )
+//				n.setDecisionPoint(true);
 			
+
+			
+			//			if(n.getId() == 14643 || n.getId() == 14620)
+//				n.setDecisionPoint(false);
+			
+			if(n.isDecisionPoint())
+				System.out.print(n.getId()+", ");
+
 			nodeIndex++;
 		}
 		
@@ -1208,7 +1228,7 @@ public class RouteDataController {
 			if(!p.isRoute() && !(p.getIsPolygon() > 0)) {
 				
 				/*if path start at the route*/
-				if(p.getNodeList().get(0).isRouteNode() && !p.getNodeList().get(0).isDecisionPoint() && p.getNodeList().size()  == 2 && p.getNodeList().get(1).getDegree() == 1 && !(p.getNodeList().get(1).getIsPointLMNode() > 0) ){
+				if(p.getNodeList().get(0).isRouteNode() &&  p.getNodeList().size()  == 2 && p.getNodeList().get(1).getDegree() == 1 ){
 					p.setChunkPath(true);
 					
 				}
@@ -1793,21 +1813,23 @@ public class RouteDataController {
 //							}
 							
 						}						
-						else if( adjPoint.getDegree() > 2 && track.size() <2 && adjPoint.getPreOrder() > -1 && adjPoint.getPostOrder() < 0  &&
-								Math.abs(adjPoint.getPreOrder() - mainPoint.getPreOrder() ) > 1	&& adjPoint != visitingList.get(visitingList.size() -2)){
-							
-							System.out.println("mainPreOrder: " + mainPoint.getPreOrder());
-							System.out.println("adjPreOrder: " + adjPoint.getPreOrder());
-						
-							System.out.println("mainPostOrder: " + mainPoint.getPostOrder());
-							System.out.println("adjPostOrder: " + adjPoint.getPostOrder());
-							
-							ArrayList<StreetNode> coEdgetrack = new ArrayList<StreetNode>();
-							coEdgetrack.add( mainPoint );
-							coEdgetrack.add( adjPoint );	
-							coEgedPathList.add(new Path(coEdgetrack));
-							
-						}
+//						else if( adjPoint.getDegree() > 2 && track.size() <2 && adjPoint.getPreOrder() > -1 && adjPoint.getPostOrder() < 0  &&
+//								Math.abs(adjPoint.getPreOrder() - mainPoint.getPreOrder() ) > 1	){
+//							
+//							if(visitingList.size() > 1 && adjPoint != visitingList.get(visitingList.size() -2)) {
+//								System.out.println("mainPreOrder: " + mainPoint.getPreOrder());
+//								System.out.println("adjPreOrder: " + adjPoint.getPreOrder());
+//							
+//								System.out.println("mainPostOrder: " + mainPoint.getPostOrder());
+//								System.out.println("adjPostOrder: " + adjPoint.getPostOrder());
+//								
+//								ArrayList<StreetNode> coEdgetrack = new ArrayList<StreetNode>();
+//								coEdgetrack.add( mainPoint );
+//								coEdgetrack.add( adjPoint );	
+//								coEgedPathList.add(new Path(coEdgetrack));
+//							}
+//							
+//						}
 	
 					
 					}
@@ -1855,7 +1877,31 @@ public class RouteDataController {
 			}
 			
 		}
+		
+		
 		pathList.add(0, routePath);
+		
+		for(StreetEdge e: streetNetwork.getEdges().values() ) {
+			if(!e.isFakeEdge() && e.getIsPolygonEdge() < 1 ) {
+				boolean achou = false;
+				for(Path p: pathList) {
+					
+					if(p.contains(e)) {
+						achou = true;
+						break;
+					}
+					
+				}
+				
+				if(!achou) {
+					ArrayList<StreetNode> coEdgetrack = new ArrayList<StreetNode>();
+					coEdgetrack.add( e.getSourcePoint() );
+					coEdgetrack.add( e.getTargetPoint() );	
+					coEgedPathList.add(new Path(coEdgetrack));
+				}
+			}
+		}
+		
 		return pathList;
 	}
 	
@@ -2598,7 +2644,19 @@ public class RouteDataController {
 	public void setRescaledRouteGeom(LineString rescaledRouteGeom) {
 		this.rescaledRouteGeom = rescaledRouteGeom;
 	}
-	
-	
 
+
+
+	public LineString getRouteTargetLS() {
+		return RouteTargetLS;
+	}
+
+
+
+	public void setRouteTargetLS(LineString routeTargetLS) {
+		RouteTargetLS = routeTargetLS;
+	}
+	
+	
+	
 }

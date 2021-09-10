@@ -25,7 +25,9 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.simplify.DouglasPeuckerSimplifier;
 
+import com.wayto.mapFeaturesModel.ClassyPointLayer;
 import com.wayto.mapFeaturesModel.Layer;
+import com.wayto.mapFeaturesModel.PlotPoint;
 import com.wayto.mapFeaturesModel.PointLayer;
 import com.wayto.mapFeaturesModel.PolyLineLayer;
 import com.wayto.model.Path;
@@ -321,36 +323,46 @@ public class MainController {
 					
 					
 				}
-
-				/***ADJUST ROUTE ADJ EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
-				/***ADJUST CHUCK EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
-				for(int i = 1; i < dataController.getPathList().size(); i++){
-					if(dataController.getPathList().get(i).isChunkPath() || dataController.getPathList().get(i).isRouteAdjEdge() ) {
-//						System.out.println("Adjusting ADjPath " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
-						//Path adjPath = dataController.getPathList().get(i);
-//						if( adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0) {
-//							System.out.println("this is LM control edge");
-//						}
-						//ArrayList<Point2D> transPointList = lt.transformRouteAdjEdgeFixDist(adjPath , 27*adjToRouteEdgesMinLength);
-//						ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
-//						System.out.println();
-////						PolyLineLayer transfPathLayer = new PolyLineLayer("TransAdjEdje " + i , 8, 2, Color.GREEN, Color.GREEN, false, true);	
-////						transfPathLayer.getLines().add(transPointList);
-////						xMap.getMapContent().getLayers().add(transfPathLayer);
-//						try {
-//							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
-//
-//							
-//							
-//						}  catch (IloException e1) {
-//							e1.printStackTrace();
-//						} catch (Exception e1) {
-//							e1.printStackTrace();
-//						}
-						//dataController.getPathList().get(i).setWasSchematized(true);
-					}
-				}
+				/** SCALE VARIATION ICONS**/
+//				double rescaleProp = dataController.getRoute().getRoutePath().asLineString(2).getLength()/dataController.getRoute().getRoutePath().asLineString(1).getLength();
+//				ArrayList<PlotPoint> scalePoint = new ArrayList<PlotPoint>();
+//				for(double x = dataController.getNetworkEnvelop().getMinX(); x < dataController.getNetworkEnvelop().getMaxX(); x += (dataController.getNetworkEnvelop().maxExtent()/120) ) {
+//					for(double y = dataController.getNetworkEnvelop().getMinY(); y < dataController.getNetworkEnvelop().getMaxY(); y += (dataController.getNetworkEnvelop().maxExtent()/120) ) {
+//						
+//						Envelope targetEnv = dataController.getRouteTargetLS().getEnvelopeInternal();
+//						double longerAxe = Math.max(targetEnv.getHeight(), targetEnv.getWidth());
+//						
+//						
+//						//longerAxe*x - targetEnv.getMinX() = (pt.getX() );
+//						//longerAxe*z = (env.getMaxY() - pt.getY())/;
+//						
+//						/*Foucs musst in in the Target geocoordinates system EPSG3857*/
+//						double focusX = longerAxe*x + targetEnv.getMinX();
+//						double focusY = targetEnv.getMaxY() - longerAxe*y;
+//						
+//						
+//						float proportion = (float)OptimizerOperator2.getProportionToPoint(focusX, focusY , dataController.getPathList(), dataController.getNetworkEnvelop().maxExtent());
+//						System.out.println("proportion: "  +  proportion);
+//						System.out.println("focusX: "  +  focusX);
+//						System.out.println("focusY: "  +  focusY);
+//						
+//						Point2D pt = new Point2D.Double(x, y);
+//						System.out.println(pt);
+//						PlotPoint scale = new PlotPoint(pt, Color.GRAY);
+//						scale.setSize((float)(proportion*700*dataController.getNetworkEnvelop().maxExtent()/30));
+//						scale.setStroke(3);
+//						scale.setColor(Color.GRAY);
+//						scalePoint.add(scale);
+//						
+//					}
+//				
+//				}
+//				
+//				ClassyPointLayer scalePointLayer = new ClassyPointLayer("Scale points");
+//				scalePointLayer.setPoints(scalePoint);
+//				xMap.getMapContent().getLayers().add(scalePointLayer);
 				
+		
 				/***SCHEMATIZE NETWROKS***/
 				if(mainFrame.getCbXIncorrectsNetwork().isSelected() || mainFrame.getCbXallNetwork().isSelected()) {
 					ArrayList<Path> pathsToSchematizeTogether = new ArrayList<Path>();
@@ -384,14 +396,38 @@ public class MainController {
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
-					
-					
-
-
+	
 				}
 
 
+				/***ADJUST ROUTE ADJ EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
+				/***ADJUST CHUCK EDGES LENGHT (ALREADY SCHEMATIZED WITH THE ROUTE***/
+				for(int i = 1; i < dataController.getPathList().size(); i++){
+					if(dataController.getPathList().get(i).isChunkPath()  ) {
+//						System.out.println("Adjusting ADjPath " + i + " size: " + dataController.getPathList().get(i).getNodeList().size() + " length: " + dataController.getPathList().get(i).getGeom().getLength() );
+						Path adjPath = dataController.getPathList().get(i);
+						if( adjPath.getNodeList().get(0).getIsPointLMNode() > 0 || adjPath.getNodeList().get(1).getIsPointLMNode() > 0) {
+							System.out.println("this is LM control edge");
+						}
+						ArrayList<Point2D> transPointList = lt.transformRouteAdjEdgeFixDist(adjPath , 2*adjToRouteEdgesFixLenght);
+						//ArrayList<Point2D> transPointList = adjPath.asJava2DList(2);
+						System.out.println();
+//						PolyLineLayer transfPathLayer = new PolyLineLayer("TransAdjEdje " + i , 8, 2, Color.GREEN, Color.GREEN, false, true);	
+//						transfPathLayer.getLines().add(transPointList);
+//						xMap.getMapContent().getLayers().add(transfPathLayer);
+						try {
+							OptimizerOperator2.updateXPath(dataController.getPathList().get(i),transPointList);
 
+							
+							
+						}  catch (IloException e1) {
+							e1.printStackTrace();
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
+						dataController.getPathList().get(i).setWasSchematized(true);
+					}
+				}
 						
 
 				
@@ -3584,28 +3620,28 @@ public class MainController {
 
 			}
 			
-			for (Path path: dataController.getCoEgedPathList()){
-				/*OnlyRoute Condition*/
-			
-					PolyLineLayer networkLayer = new PolyLineLayer("CoPath" + pathIndex);
-					
-				
-						networkLayer.setType(Layer.ORIGINAL_MAIN);
-						networkLayer.setColor(Color.GRAY);
-						
-					
-					networkLayer.setStroke(featureEnhance*4);
-					networkLayer.setLayerDepth(10);
-	
-						networkLayer.setVisible(true);
-					networkLayer.getLines().add(path.asJava2DList(1));
-
-					xMap.getMapContent().getLayers().add(
-							networkLayer
-							);
-					pathIndex++;
-			
-			}
+//			for (Path path: dataController.getCoEgedPathList()){
+//				/*OnlyRoute Condition*/
+//			
+//					PolyLineLayer networkLayer = new PolyLineLayer("CoPath" + pathIndex);
+//					
+//				
+//						networkLayer.setType(Layer.ORIGINAL_MAIN);
+//						networkLayer.setColor(Color.CYAN);
+//						
+//					
+//					networkLayer.setStroke(featureEnhance*4);
+//					networkLayer.setLayerDepth(10);
+//	
+//						networkLayer.setVisible(true);
+//					networkLayer.getLines().add(path.asJava2DList(1));
+//
+//					xMap.getMapContent().getLayers().add(
+//							networkLayer
+//							);
+//					pathIndex++;
+//			
+//			}
 
 				
 				
@@ -4036,28 +4072,28 @@ private void addOriginalXRouteLayers() {
 
 			}
 			
-			for (Path path: dataController.getCoEgedPathList()){
-				/*OnlyRoute Condition*/
-			
-					PolyLineLayer networkLayer = new PolyLineLayer("XCoPath" + pathIndex);
-					
-				
-						networkLayer.setType(Layer.ORIGINAL_MAIN);
-						networkLayer.setColor(Color.GRAY);
-						
-					
-					networkLayer.setStroke(featureEnhance*4);
-					networkLayer.setLayerDepth(10);
-	
-						networkLayer.setVisible(true);
-					networkLayer.getLines().add(path.asJava2DList(2));
-
-					xMap.getMapContent().getLayers().add(
-							networkLayer
-							);
-					pathIndex++;
-			
-			}
+//			for (Path path: dataController.getCoEgedPathList()){
+//				/*OnlyRoute Condition*/
+//			
+//					PolyLineLayer networkLayer = new PolyLineLayer("XCoPath" + pathIndex);
+//					
+//				
+//						networkLayer.setType(Layer.ORIGINAL_MAIN);
+//						networkLayer.setColor(Color.GRAY);
+//						
+//					
+//					networkLayer.setStroke(featureEnhance*4);
+//					networkLayer.setLayerDepth(10);
+//	
+//						networkLayer.setVisible(true);
+//					networkLayer.getLines().add(path.asJava2DList(2));
+//
+//					xMap.getMapContent().getLayers().add(
+//							networkLayer
+//							);
+//					pathIndex++;
+//			
+//			}
 			
 			
 			/****Polygonal Features ******/

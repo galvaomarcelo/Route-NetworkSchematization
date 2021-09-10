@@ -406,26 +406,6 @@ public final class GeoConvertionsOperations {
 	}
 	
 	
-	public static Point normalizeJTSPoint2(Point pt, Envelope env, double maxCoordinate) {
-		GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
-		Coordinate coordTarget = new Coordinate();
-		double longerAxe = Math.max(env.getHeight(), env.getWidth());
-		coordTarget.x = maxCoordinate*((pt.getX() - env.getMinX())/longerAxe);
-		coordTarget.y = maxCoordinate*((env.getMaxY() - pt.getY())/longerAxe);
-		return geometryFactory.createPoint(coordTarget);
-		
-	}
-	
-
-
-	public static Point denormalizeJTSPoint(Point pt, Envelope env) {
-		GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
-		Coordinate coordTarget = new Coordinate();
-		coordTarget.x = pt.getX() + env.getMinX();
-		coordTarget.y = env.getMaxY() - pt.getY();
-		return geometryFactory.createPoint(coordTarget);
-		
-	}
 
 
 	// first argument stands for schematized single lineString; second stands for decision point list and the third one stands for the proportion ranging from (0-1)

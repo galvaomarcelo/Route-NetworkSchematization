@@ -312,6 +312,7 @@ public class TopoOperator3 {
 			Point newPoint = null;
 
 			if( e.getSourcePoint().isRouteNode() && !e.getTargetPoint().isRouteNode() && adjacencyList.get(e.getTargetPoint().getId()).size() > 2) {
+				
 				double angle = GeometricOperation.getAngleBetweenPointsRelativeToAxisX(e.getSourcePoint().getGeom().getX(), e.getSourcePoint().getGeom().getY(),
 						e.getTargetPoint().getGeom().getX(), e.getTargetPoint().getGeom().getY());
 
@@ -332,6 +333,7 @@ public class TopoOperator3 {
 				}
 			}
 			else if (e.getTargetPoint().isRouteNode() && !e.getSourcePoint().isRouteNode() &&  adjacencyList.get(e.getSourcePoint().getId()).size() > 2){
+				
 				double angle = GeometricOperation.getAngleBetweenPointsRelativeToAxisX(e.getTargetPoint().getGeom().getX(), e.getTargetPoint().getGeom().getY(),
 						e.getSourcePoint().getGeom().getX(), e.getSourcePoint().getGeom().getY());
 				/*if edge adj. to long split in the minimal distance*/
@@ -460,8 +462,8 @@ public class TopoOperator3 {
 		//chunckPahtAnalyses(pathList);
 		
 		for(Path p: pathList){
-			//if(!p.isRoute() && !p.isChunkPath()){
-			if(!p.isRoute() ){
+			if(!p.isRoute() && !p.isChunkPath()){
+			//if(!p.isRoute() ){
 				StreetNode n;
 				/*if path start at the route*/
 				if(p.getNodeList().get(0).isRouteNode() ){
@@ -472,29 +474,33 @@ public class TopoOperator3 {
 
 						/*if sourcenode of the edge adj. */
 						if(e.getSourcePoint().isRouteNode()){
+							
 							double angle = GeometricOperation.getAngleBetweenPointsRelativeToAxisX(e.getSourcePoint().getGeom().getX(), e.getSourcePoint().getGeom().getY(),
 									e.getTargetPoint().getGeom().getX(), e.getTargetPoint().getGeom().getY());
-							if(e.getSourcePoint().getGeom().distance(e.getTargetPoint().getGeom()) > minDist*1.1){
+							
+							if(e.getSourcePoint().getGeom().distance(e.getTargetPoint().getGeom()) > minDist*1.5){
 
 								double newX = e.getSourcePoint().getGeom().getX() + minDist*Math.cos(angle);
 								double newY = e.getSourcePoint().getGeom().getY() - minDist*Math.sin(angle);
 
 								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
 							}
-							else{
-								double dist = 0.5*e.getSourcePoint().getGeom().distance(e.getTargetPoint().getGeom() );
-								double newX = e.getSourcePoint().getGeom().getX() + dist*Math.cos(angle);
-								double newY = e.getSourcePoint().getGeom().getY() - dist*Math.sin(angle);
-
-
-								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
-							}
+//							else{
+//								double dist = 0.5*e.getSourcePoint().getGeom().distance(e.getTargetPoint().getGeom() );
+//								double newX = e.getSourcePoint().getGeom().getX() + dist*Math.cos(angle);
+//								double newY = e.getSourcePoint().getGeom().getY() - dist*Math.sin(angle);
+//
+//
+//								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
+//							}
 						}
 						/*if targetnode of the edge adj. */
 						else if (e.getTargetPoint().isRouteNode()){
+							
 							double angle = GeometricOperation.getAngleBetweenPointsRelativeToAxisX(e.getTargetPoint().getGeom().getX(), e.getTargetPoint().getGeom().getY(),
 									e.getSourcePoint().getGeom().getX(), e.getSourcePoint().getGeom().getY());
-							/*if edge adj. to long split in the minimal distance*/
+							
+							/*if edge adj. to long split in the minimal distance*/		
 							if(e.getTargetPoint().getGeom().distance(e.getSourcePoint().getGeom()) > minDist*1.1){
 
 								double newX = e.getTargetPoint().getGeom().getX() + minDist*Math.cos(angle);
@@ -503,12 +509,12 @@ public class TopoOperator3 {
 								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
 							}
 							/*if edge adj. is short split in half/third*/
-							else{
-								double dist = 0.5*e.getTargetPoint().getGeom().distance(e.getSourcePoint().getGeom() );
-								double newX = e.getTargetPoint().getGeom().getX() + dist*Math.cos(angle);
-								double newY = e.getTargetPoint().getGeom().getY() - dist*Math.sin(angle);
-								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
-							}
+//							else{
+//								double dist = 0.5*e.getTargetPoint().getGeom().distance(e.getSourcePoint().getGeom() );
+//								double newX = e.getTargetPoint().getGeom().getX() + dist*Math.cos(angle);
+//								double newY = e.getTargetPoint().getGeom().getY() - dist*Math.sin(angle);
+//								newPoint = geometryFactory.createPoint(new Coordinate(newX, newY));
+//							}
 
 
 						}
@@ -753,13 +759,13 @@ public class TopoOperator3 {
 
 		for(StreetEdge e: streetNetwork.getEdges().values()) {
 
-			System.out.println("Edge id: " + e.getId() + "  num Points: " + e.getGeom().getNumPoints()  );
+//			System.out.println("Edge id: " + e.getId() + "  num Points: " + e.getGeom().getNumPoints()  );
 			if( e.getSourcePoint().getCoordinate().distance(e.getGeom().getPointN(0)) > 0 ) {
 				
 				
-				System.out.println("Edge source with wrong geometry: "+e.getId() + " Dont divide!");
-				System.out.println("Source : " + e.getSourcePoint().getCoordinate() + "vs." + e.getGeom().getPointN(0));
-				System.out.println("Target : " + e.getTargetPoint().getCoordinate() + "vs." + e.getGeom().getPointN(e.getGeom().getNumPoints()-1));
+//				System.out.println("Edge source with wrong geometry: "+e.getId() + " Dont divide!");
+//				System.out.println("Source : " + e.getSourcePoint().getCoordinate() + "vs." + e.getGeom().getPointN(0));
+//				System.out.println("Target : " + e.getTargetPoint().getCoordinate() + "vs." + e.getGeom().getPointN(e.getGeom().getNumPoints()-1));
 					if(e.getSourcePoint().getCoordinate().getX() != e.getGeom().getPointN(0).getX() ||
 							e.getSourcePoint().getCoordinate().getY() != e.getGeom().getPointN(0).getY() ) {
 						e.getSourcePoint().setCoordinate(e.getGeom().getPointN(0));
@@ -774,9 +780,9 @@ public class TopoOperator3 {
 			if( e.getTargetPoint().getCoordinate().distance(e.getGeom().getPointN(e.getGeom().getNumPoints()-1)) > 0 ) {
 				
 				
-				System.out.println("Edge target with wrong geometry: "+e.getId() + " Dont divide!");
-				System.out.println("Source : " + e.getSourcePoint().getCoordinate() + "vs." + e.getGeom().getPointN(0));
-				System.out.println("Target : " + e.getTargetPoint().getCoordinate() + "vs." + e.getGeom().getPointN(e.getGeom().getNumPoints()-1));
+//				System.out.println("Edge target with wrong geometry: "+e.getId() + " Dont divide!");
+//				System.out.println("Source : " + e.getSourcePoint().getCoordinate() + "vs." + e.getGeom().getPointN(0));
+//				System.out.println("Target : " + e.getTargetPoint().getCoordinate() + "vs." + e.getGeom().getPointN(e.getGeom().getNumPoints()-1));
 					
 					if(e.getTargetPoint().getCoordinate().getX() != e.getGeom().getPointN(e.getGeom().getNumPoints()-1).getX() ||
 					e.getTargetPoint().getCoordinate().getY() != e.getGeom().getPointN(e.getGeom().getNumPoints()-1).getY() ) {
@@ -796,7 +802,7 @@ public class TopoOperator3 {
 //					e.getTargetPoint().getCoordinate().getX() == e.getGeom().getPointN(e.getGeom().getNumPoints()-1).getX() &&
 //					e.getTargetPoint().getCoordinate().getY() == e.getGeom().getPointN(e.getGeom().getNumPoints()-1).getY() )
 				{
-				System.out.println("Linestring start in source and ends in target");
+				//System.out.println("Linestring start in source and ends in target");
 
 				StreetEdge edgeToBreak =  e;
 				StreetNode lastNode;
@@ -835,7 +841,7 @@ public class TopoOperator3 {
 				}
 				else if(edgeToBreak.isStubEdge() 
 						&& (adjacencyList.get(edgeToBreak.getSourcePoint().getId()).size() == 1 || adjacencyList.get(edgeToBreak.getTargetPoint().getId()).size() == 1 )  ){
-					System.out.println(" is stub to break");
+//					System.out.println(" is stub to break");
 					if(edgeToBreak.getSourcePoint().isRouteNode()) {
 						lastNode = addNodeToEdge(edgeToBreak.getGeom().getPointN(1), true, edgeToBreak, adjacencyList, streetNodeMap, tempStreetNetWork);
 						StreetEdge edgeToRemove = tempStreetNetWork.getEdge(lastNode, edgeToBreak.getTargetPoint());
@@ -885,7 +891,7 @@ public class TopoOperator3 {
 
 			}
 			else {
-				System.out.println("two node edge");
+//				System.out.println("two node edge");
 				
 			}
 

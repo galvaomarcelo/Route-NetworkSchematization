@@ -802,6 +802,24 @@ public class Path implements Cloneable{
 			// TODO Auto-generated method stub
 			return super.clone();
 		}
+	
+	
+	
+	public boolean contains(StreetEdge e) {
+		for(int i = 0; i<nodeList.size() -1; i++) {
+			if(nodeList.get(i) == e.getSourcePoint() ) {
+				if(nodeList.get(i+1) == e.getTargetPoint()) 
+					return true;						
+				
+			}
+			else if(nodeList.get(i) == e.getTargetPoint() ) {
+				if(nodeList.get(i+1) == e.getSourcePoint()) 
+					return true;						
+				
+			}				
+		}
+		return false;
+	}
 
 	
 	

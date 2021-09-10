@@ -362,7 +362,17 @@ public class Route {
 		/**Route3 Experiments rescale node*/
 		//int[] predefinedNodesId = {14618, 14165, 14131, 38923, 43370,  40320, 75687, 32963, 38979, 33049, 32956, 32614,	 60004};
 		/**Route2 Experiments rescale node*/
-		int[] predefinedNodesId = {38694, 33459, 16575,32396, 48562, 42058, 38747, 34584, 23314, 23352, 32769, 33055, 32606 };
+		//int[] predefinedNodesId = {38694, 33459, 16575,32396, 48562, 42058, 38747, 34584, 23314, 23352, 32769, 33055, 32606 };
+		/**Route Ahlen2 Luedirenghausen*/
+		//int[] predefinedNodesId = {32947, 32948, 23314, 23352, 39835, 39000, 1162, 10074, 4056, 14405, 25749, 9084, 9092};
+		
+		/**Route Muenster Luedirenghausen*/
+		//int[] predefinedNodesId = { 47354,  48441, 45648,  16166, 46276, 63610, 40532, 45614, 57838, 25723, 39900};
+		
+		
+		/**Route HBF Geo2*/
+		int[] predefinedNodesId = { 52805, 45597, 25699, 18906, 8847, 26361, 26362, 15989, 99881};
+		
 		
 		ArrayList<Integer> nodeIdList = new ArrayList<Integer>();
 		for(int id:predefinedNodesId) {

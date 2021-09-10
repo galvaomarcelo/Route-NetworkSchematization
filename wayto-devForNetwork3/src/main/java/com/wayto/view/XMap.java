@@ -196,11 +196,11 @@ public class XMap extends JPanel{
 					ClassyPointLayer cpLayer = (ClassyPointLayer)layer;
 					
 					stroke = cpLayer.getStroke()/(float)transformScale.getScaleX();
-					size = cpLayer.getSize()/(float)transformScale.getScaleX();
+					//size = cpLayer.getSize()/(float)transformScale.getScaleX();
 					g2d.setStroke(new BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_BEVEL));
 
 					for(PlotPoint p:cpLayer.getPoints()){
-
+						size = p.getSize()/(float)transformScale.getScaleX();
 						Ellipse2D.Double shape = new Ellipse2D.Double(p.getPosition().getX() - size/2,p.getPosition().getY() - size/2, size, size);
 						g2d.setColor( cpLayer.getColor());    
 						g2d.draw(shape);
