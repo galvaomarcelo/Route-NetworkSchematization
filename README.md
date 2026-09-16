@@ -2,6 +2,10 @@
 
 A schematization algorithm for street networks aimed at **facilitating the readability of routes**. It uses **Integer Linear Programming (ILP)** to produce schematic maps that preserve the topology of the network while optimizing route layout criteria.
 
+📄 **Paper:** [Schematizing car routes with their surrounding street network (CaGIS 2023)](https://doi.org/10.1080/15230406.2022.2125077)
+📦 **Source code:** [OSF Project](https://osf.io/vc3kw/overview)
+
+
 [![Paper](https://img.shields.io/badge/Paper-CaGIS%202023-blue)](https://doi.org/10.1080/15230406.2022.2125077)
 [![OSF](https://img.shields.io/badge/OSF-Project-orange)](https://osf.io/vc3kw/overview)
 [![Java](https://img.shields.io/badge/Java-CPLEX-red)]()
